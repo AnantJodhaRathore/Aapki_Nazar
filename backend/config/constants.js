@@ -1,0 +1,26 @@
+module.exports = {
+  SLA_DURATIONS: {
+    LOW: 72,
+    MEDIUM: 24,
+    HIGH: 8,
+    CRITICAL: 2
+  },
+  SEVERITY_WEIGHTS: {
+    LOW: 1,
+    MEDIUM: 2,
+    HIGH: 3,
+    CRITICAL: 4
+  },
+  RISK_SCORING: {
+    BASE: { LOW: 25, MEDIUM: 50, HIGH: 75, CRITICAL: 90 },
+    BONUS_MULTIPLE: 5,
+    ENTROPY_BONUS: 10,
+    VELOCITY_BONUS: 15
+  },
+  THRESHOLDS: {
+    ENTROPY_MIN_LEN: 100,
+    ENTROPY_MIN_BITS: 5.8,
+    VELOCITY_WINDOW_MS: 10000,
+    VELOCITY_MAX_REQS: 35
+  }
+};

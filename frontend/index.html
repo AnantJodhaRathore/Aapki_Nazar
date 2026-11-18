@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Aapki Nazar | Cloud &amp; Hybrid Incident Command Platform</title>
+    <meta name="description" content="Next-gen Security Operations Center featuring Universal Log Normalization, Live Chaos Simulation, and Hybrid Threat Detection." />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="style.css" />
+    <!-- Chart.js for High-Impact Visual Analytics -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Socket.io for Real-Time Instant Updates -->
+    <script src="/socket.io/socket.io.js"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+  </head>
+  <body>
+    <div class="app-layout">
+
+      <!-- ── Left Sidebar Navigation ── -->
+      <aside class="sidebar">
+        <div class="sidebar-header">
+          <div class="brand-badge"><i data-lucide="eye" style="width: 18px; height: 18px;"></i></div>
+          <div>
+            <div class="brand-title">Aapki Nazar</div>
+            <div class="brand-sub">SOC Intelligence</div>
+          </div>
+        </div>
+
+        <nav class="sidebar-nav">
+          <div class="nav-section-label">Operations</div>
+          <a class="nav-item active" data-view="view-dashboard">
+            <span class="nav-icon"><i data-lucide="layout-dashboard"></i></span>
+            <span>Dashboard</span>
+          </a>
+          <a class="nav-item" data-view="view-telemetry">
+            <span class="nav-icon"><i data-lucide="activity"></i></span>
+            <span>Live Telemetry</span>
+            <span id="sim-status-pill" class="nav-pill" style="color:var(--status-resolved);">LIVE</span>
+          </a>
+          <a class="nav-item" data-view="view-incidents">
+            <span class="nav-icon"><i data-lucide="siren"></i></span>
+            <span>Incident Command</span>
+            <span id="active-incidents-pill" class="nav-pill">0</span>
+          </a>
+
+          <div class="nav-section-label" style="margin-top:10px;">Intelligence</div>
+          <a class="nav-item" data-view="view-studio">
+            <span class="nav-icon"><i data-lucide="shield"></i></span>
+            <span>Threat Studio</span>
+          </a>
+          <a class="nav-item" data-view="view-rules">
+            <span class="nav-icon"><i data-lucide="clipboard-list"></i></span>
+            <span>Signature Catalog</span>
+          </a>
+        </nav>
+
+        <div class="sidebar-footer"></div>
+      </aside>
+
+      <!-- ── Main Viewport ── -->
+      <main class="main-wrapper">
+
+        <!-- Top Header Bar -->
+        <header class="top-bar">
+          <div class="top-bar-title">
+            <span id="current-view-title">Executive Telemetry</span>
+            <span id="connection-indicator" class="badge badge-low" style="font-size:10px;"><span class="live-dot"></span> CONNECTED</span>
+          </div>
+          <div class="top-bar-actions">
+            <button id="chaos-toggle-btn" class="btn btn-danger btn-sm"><i data-lucide="play" style="width:13px;height:13px;"></i> Start Simulator</button>
+            <button id="export-csv-btn" class="btn btn-secondary btn-sm"><i data-lucide="download" style="width:13px;height:13px;"></i> Export</button>
+            <button id="open-create-btn" class="btn btn-primary btn-sm"><i data-lucide="plus" style="width:13px;height:13px;"></i> New Incident</button>
+          </div>
+        </header>
+
+        <!-- Dynamic Content View Area -->
+        <div class="view-container">
+
+          <!-- ════ VIEW 1: EXECUTIVE DASHBOARD ════ -->
+          <section id="view-dashboard" class="view-panel active">
+            <!-- Metric Cards Deck -->
+            <div class="stats-grid">
+              <div class="stat-card">
+                <div class="card-label">Active Incidents</div>
+                <div id="stat-active" class="card-value">—</div>
+                <div class="card-subtext" id="stat-total-sub">Total tracked: —</div>
+              </div>
+              <div class="stat-card critical-card">
+                <div class="card-label">Critical Threats</div>
+                <div id="stat-critical" class="card-value">—</div>
+                <div class="card-subtext" style="color:var(--sev-crit);">Immediate action required</div>
+              </div>
+              <div class="stat-card">
+                <div class="card-label">SLA Compliance</div>
+                <div id="stat-sla" class="card-value" style="color:var(--status-resolved);">—%</div>
+                <div class="card-subtext">Mean time to resolve: <span id="stat-mttr">—m</span></div>
+              </div>
+              <div class="stat-card">
+                <div class="card-label">Threats Detected</div>
+                <div id="stat-detected" class="card-value" style="color:var(--violet-400);">—</div>
+                <div class="card-subtext">Automated SOAR triage</div>
+              </div>
+            </div>
+
+            <!-- Visual Charts Grid -->
+            <div class="charts-grid">
+              <div class="chart-card">
+                <div class="chart-header">
+                  <div class="chart-title"><i data-lucide="trending-up" style="width:18px;height:18px;"></i> Threat Activity Timeline (Real-Time)</div>
+                  <span class="badge badge-low">Recent Threat Activity</span>
+                </div>
+                <div class="chart-canvas-wrap">
+                  <canvas id="timelineChart"></canvas>
+                </div>
+              </div>
+
+              <div class="chart-card">
+                <div class="chart-header">
+                  <div class="chart-title"><i data-lucide="target" style="width:18px;height:18px;"></i> Attack Vector Distribution</div>
+                  <span class="badge badge-low">Threat Categories</span>
+                </div>
+                <div class="chart-canvas-wrap">
+                  <canvas id="vectorChart"></canvas>
+                </div>
+              </div>
+            </div>
+
+            <!-- Health Status Bar -->
+            <div id="health-banner" class="stat-card" style="display:flex;align-items:center;justify-content:space-between;padding:16px 22px;">
+              <div style="display:flex;align-items:center;gap:12px;">
+                <span id="health-icon-wrap" style="font-size:24px;display:flex;"><i data-lucide="shield-check" style="width:28px;height:28px;color:var(--status-resolved);"></i></span>
+                <div>
+                  <div id="health-label" style="font-weight:700;font-size:15px;">Aapki Nazar Security Health Score: HEALTHY</div>
+                  <div id="health-sub" style="font-size:12px;color:var(--text-muted);" title="Calculated as 100 - (active weighted incidents)">All platform services operating normally.</div>
+                </div>
+              </div>
+              <div id="health-score-badge" class="badge badge-low" style="font-size:13px;padding:6px 14px;">Score: 100/100</div>
+            </div>
+          </section>
+
+          <!-- ════ VIEW 2: LIVE TELEMETRY STREAM ════ -->
+          <section id="view-telemetry" class="view-panel">
+            <div class="chaos-panel">
+              <div class="chaos-header">
+                <div style="display:flex;align-items:center;gap:12px;">
+                  <div class="chaos-icon-box"><i data-lucide="zap" style="width:18px;height:18px;"></i></div>
+                  <div>
+                    <div style="font-weight:700;font-size:14px;letter-spacing:0.02em;color:#fff;">Chaos Engine Simulator Controls</div>
+                    <div style="font-size:11px;color:var(--text-tertiary);margin-top:2px;">Automated multi-vector threat generation</div>
+                  </div>
+                </div>
+                <div style="display:flex;align-items:center;gap:12px;">
+                  <span id="chaos-status-badge" class="badge badge-low">ENGINE IDLE</span>
+                  <button id="sim-start-stop-btn" class="btn btn-danger btn-sm" style="padding:6px 14px;"><i data-lucide="play" style="width:13px;height:13px;"></i> Start Generator</button>
+                </div>
+              </div>
+              <div class="chaos-body">
+                <div class="slider-group">
+                  <div class="slider-header">
+                    <span class="slider-label"><i data-lucide="activity" style="width:14px;height:14px;"></i> Traffic Volume (Interval)</span>
+                    <span id="chaos-interval-val" class="slider-value">1500 ms</span>
+                  </div>
+                  <input type="range" class="chaos-slider slider-violet" id="chaos-interval-slider" min="100" max="3000" step="100" value="1500">
+                  <div class="slider-ticks"><span>Fast (100ms)</span><span>Slow (3s)</span></div>
+                </div>
+                <div class="slider-group">
+                  <div class="slider-header">
+                    <span class="slider-label" style="color:var(--sev-crit);"><i data-lucide="crosshair" style="width:14px;height:14px;"></i> Attack Intensity</span>
+                    <span id="chaos-attack-val" class="slider-value" style="color:var(--sev-crit);text-shadow: 0 0 10px rgba(220,38,38,0.4);">35%</span>
+                  </div>
+                  <input type="range" class="chaos-slider slider-crimson" id="chaos-attack-slider" min="0.05" max="1.0" step="0.05" value="0.35">
+                  <div class="slider-ticks"><span>Benign Only</span><span>100% Malicious</span></div>
+                </div>
+              </div>
+            </div>
+
+            <div class="terminal-container">
+              <div class="terminal-header">
+                <div style="display:flex;align-items:center;gap:10px;">
+                  <span class="live-dot"></span>
+                  <span style="font-weight:600;font-size:12px;font-family:'JetBrains Mono',monospace;color:var(--text-secondary);letter-spacing:0.08em;">LIVE INGESTION STREAM</span>
+                </div>
+                <div style="display:flex;align-items:center;gap:10px;">
+                  <button id="clear-stream-btn" class="btn btn-secondary btn-sm">Clear</button>
+                </div>
+              </div>
+              <div id="terminal-stream" class="terminal-stream-body">
+                <div class="log-line" style="color:var(--text-tertiary);">[SYSTEM] WebSocket telemetry stream initialized. Waiting for inbound server and firewall logs...</div>
+              </div>
+            </div>
+          </section>
+
+          <!-- ════ VIEW 3: INCIDENT COMMAND (KANBAN & TABLE) ════ -->
+          <section id="view-incidents" class="view-panel">
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:18px;flex-wrap:wrap;">
+              <div style="display:flex;align-items:center;gap:10px;flex:1;min-width:240px;">
+                <input id="search-input" type="text" placeholder="🔎 Search incidents by ID, title, attacker IP..." style="background:var(--bg-input);border:1px solid var(--border-subtle);border-radius:var(--radius-sm);padding:8px 14px;color:white;width:100%;" />
+              </div>
+              <div style="display:flex;align-items:center;gap:10px;">
+                <button id="view-kanban-toggle" class="btn btn-primary btn-sm"><i data-lucide="trello" style="width:14px;height:14px;"></i> Kanban Board</button>
+                <button id="view-table-toggle" class="btn btn-secondary btn-sm"><i data-lucide="table" style="width:14px;height:14px;"></i> Data Grid</button>
+              </div>
+            </div>
+
+            <!-- Kanban View -->
+            <div id="incidents-kanban-view" class="kanban-board">
+              <div class="kanban-column" data-status="OPEN">
+                <div class="kanban-header">
+                  <span class="kanban-title"><i data-lucide="inbox" style="width:16px;height:16px;"></i> Unassigned Triage</span>
+                  <span id="cnt-col-open" class="nav-pill">0</span>
+                </div>
+                <div class="kanban-cards-wrap" id="col-open"></div>
+              </div>
+
+              <div class="kanban-column" data-status="IN_PROGRESS">
+                <div class="kanban-header">
+                  <span class="kanban-title"><i data-lucide="search" style="width:16px;height:16px;"></i> In Investigation</span>
+                  <span id="cnt-col-progress" class="nav-pill">0</span>
+                </div>
+                <div class="kanban-cards-wrap" id="col-progress"></div>
+              </div>
+
+              <div class="kanban-column" data-status="RESOLVED">
+                <div class="kanban-header">
+                  <span class="kanban-title"><i data-lucide="check-circle-2" style="width:16px;height:16px;"></i> Contained &amp; Resolved</span>
+                  <span id="cnt-col-resolved" class="nav-pill">0</span>
+                </div>
+                <div class="kanban-cards-wrap" id="col-resolved"></div>
+              </div>
+            </div>
+
+            <!-- Table View (Alternative) -->
+            <div id="incidents-table-view" class="stat-card" style="display:none;padding:0;overflow:hidden;">
+              <table style="width:100%;border-collapse:collapse;text-align:left;font-size:13px;">
+                <thead>
+                  <tr style="background:rgba(8,12,22,0.95);border-bottom:1px solid var(--border-subtle);">
+                    <th style="padding:14px 18px;color:var(--text-muted);font-size:11px;">ID</th>
+                    <th style="padding:14px 18px;color:var(--text-muted);font-size:11px;">INCIDENT</th>
+                    <th style="padding:14px 18px;color:var(--text-muted);font-size:11px;">SEVERITY</th>
+                    <th style="padding:14px 18px;color:var(--text-muted);font-size:11px;">STATUS</th>
+                    <th style="padding:14px 18px;color:var(--text-muted);font-size:11px;">ASSIGNED TO</th>
+                    <th style="padding:14px 18px;color:var(--text-muted);font-size:11px;">SLA</th>
+                    <th style="padding:14px 18px;color:var(--text-muted);font-size:11px;">ACTIONS</th>
+                  </tr>
+                </thead>
+                <tbody id="incidents-table-body"></tbody>
+              </table>
+            </div>
+          </section>
+
+          <!-- ════ VIEW 4: THREAT DETECTION STUDIO ════ -->
+          <section id="view-studio" class="view-panel">
+            <div class="stat-card" style="margin-bottom:20px;">
+              <div class="chart-header">
+                <div>
+                  <h2 style="font-size:16px;font-weight:700;"><i data-lucide="shield" style="width:18px;height:18px;vertical-align:text-bottom;"></i> Universal Threat Analyzer &amp; Grok Sandbox</h2>
+                  <p style="font-size:12.5px;color:var(--text-muted);margin-top:2px;">Format-Agnostic Normalizer, Shannon Entropy Calculator, and 5-Stage Risk Matrix.</p>
+                </div>
+                <span class="badge badge-low">Active Engine</span>
+              </div>
+
+              <!-- Quick Presets -->
+              <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:14px;">
+                <button class="btn btn-secondary btn-sm preset-btn" data-preset="sqli"><i data-lucide="zap" style="width:14px;height:14px;"></i> SQL Injection</button>
+                <button class="btn btn-secondary btn-sm preset-btn" data-preset="xss"><i data-lucide="zap" style="width:14px;height:14px;"></i> XSS Attack</button>
+                <button class="btn btn-secondary btn-sm preset-btn" data-preset="cmdi"><i data-lucide="terminal" style="width:14px;height:14px;"></i> CMDi (Shell)</button>
+                <button class="btn btn-secondary btn-sm preset-btn" data-preset="ssrf"><i data-lucide="globe" style="width:14px;height:14px;"></i> AWS SSRF</button>
+                <button class="btn btn-secondary btn-sm preset-btn" data-preset="splunk"><i data-lucide="database" style="width:14px;height:14px;"></i> Splunk BOTS</button>
+                <button class="btn btn-secondary btn-sm preset-btn" data-preset="log4j"><i data-lucide="coffee" style="width:14px;height:14px;"></i> Log4Shell</button>
+                <button class="btn btn-secondary btn-sm preset-btn" data-preset="entropy"><i data-lucide="lock" style="width:14px;height:14px;"></i> High Entropy Obfuscation</button>
+                <button class="btn btn-secondary btn-sm preset-btn" data-preset="json"><i data-lucide="cloud" style="width:14px;height:14px;"></i> AWS CloudTrail JSON</button>
+                <button class="btn btn-secondary btn-sm preset-btn" data-preset="clean"><i data-lucide="check-circle" style="width:14px;height:14px;"></i> Clean Traffic</button>
+              </div>
+
+              <textarea id="studio-log-input" rows="5" style="width:100%;background:var(--bg-input);border:1px solid var(--border-subtle);border-radius:var(--radius-sm);padding:12px;color:white;font-family:'JetBrains Mono',monospace;font-size:12.5px;line-height:1.6;" placeholder="Paste ANY log format here (Apache, Nginx, JSON, Syslog, or raw string)..."></textarea>
+
+              <div style="display:flex;gap:10px;margin-top:12px;">
+                <button id="studio-analyze-btn" class="btn btn-primary"><i data-lucide="search" style="width:14px;height:14px;"></i> Analyze Log with 5-Stage Engine</button>
+                <button id="studio-clear-btn" class="btn btn-secondary">Clear</button>
+              </div>
+            </div>
+
+            <!-- Live Inspection Breakdown Panel -->
+            <div id="studio-result-card" class="stat-card" style="display:none;">
+              <div class="chart-header">
+                <div style="display:flex;align-items:center;gap:10px;">
+                  <span id="studio-threat-title" style="font-size:16px;font-weight:700;">Detection Result</span>
+                  <span id="studio-severity-badge" class="badge badge-high">HIGH</span>
+                  <span id="studio-mitre-badge" class="badge badge-low">MITRE T1190</span>
+                </div>
+                <div id="studio-score-badge" class="badge badge-critical" style="font-size:13px;padding:6px 12px;">Threat Score: 85/100</div>
+              </div>
+
+              <!-- 5-Stage Diagnostics Grid -->
+              <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin:16px 0;">
+                <div style="background:rgba(0,0,0,0.3);padding:10px 14px;border-radius:var(--radius-sm);border:1px solid var(--border-subtle);">
+                  <div class="card-label">Log Format</div>
+                  <div id="diag-format" style="font-weight:600;font-size:12px;color:var(--accent-primary);">—</div>
+                </div>
+                <div style="background:rgba(0,0,0,0.3);padding:10px 14px;border-radius:var(--radius-sm);border:1px solid var(--border-subtle);">
+                  <div class="card-label">Source IP</div>
+                  <div id="diag-ip" style="font-weight:600;font-size:12px;font-family:'JetBrains Mono',monospace;">—</div>
+                </div>
+                <div style="background:rgba(0,0,0,0.3);padding:10px 14px;border-radius:var(--radius-sm);border:1px solid var(--border-subtle);">
+                  <div class="card-label">Shannon Entropy</div>
+                  <div id="diag-entropy" style="font-weight:600;font-size:12px;">—</div>
+                </div>
+                <div style="background:rgba(0,0,0,0.3);padding:10px 14px;border-radius:var(--radius-sm);border:1px solid var(--border-subtle);">
+                  <div class="card-label">Velocity Status</div>
+                  <div id="diag-velocity" style="font-weight:600;font-size:12px;color:var(--status-resolved);">Normal</div>
+                </div>
+              </div>
+
+              <!-- Extracted Threat Snippet -->
+              <div class="card-label" style="margin-top:14px;">Extracted Threat Payload</div>
+              <div id="diag-payload" class="code-snippet" style="color:#f87171;margin-top:4px;"></div>
+
+              <!-- Automated SOAR Playbook Recommendation -->
+              <div id="diag-playbook-wrap" style="margin-top:18px;background:rgba(10,16,30,0.8);border:1px solid var(--border-subtle);border-radius:var(--radius-md);padding:16px;">
+                <div style="font-weight:700;color:var(--accent-primary);font-size:13px;margin-bottom:8px;display:flex;align-items:center;gap:6px;"><i data-lucide="shield" style="width:14px;height:14px;"></i> SOAR MITIGATION PLAYBOOK</div>
+                <div id="diag-playbook-summary" style="font-size:13px;color:var(--text-secondary);line-height:1.6;"></div>
+                <div id="diag-playbook-code" class="code-snippet" style="margin-top:10px;"></div>
+              </div>
+            </div>
+          </section>
+
+          <!-- ════ VIEW 5: SIGNATURE CATALOG ════ -->
+          <section id="view-rules" class="view-panel">
+            <div class="stat-card">
+              <div class="chart-header">
+                <div>
+                  <h2 style="font-size:16px;font-weight:700;display:flex;align-items:center;gap:8px;"><i data-lucide="clipboard-list" style="width:18px;height:18px;"></i> Active Threat Signature Catalog</h2>
+                  <p style="font-size:12.5px;color:var(--text-muted);margin-top:2px;">Built-in regex signatures with MITRE ATT&amp;CK technique mapping.</p>
+                </div>
+                <span class="badge badge-low">25 Active Rules</span>
+              </div>
+              <div id="rules-catalog-list" style="display:flex;flex-direction:column;gap:10px;margin-top:16px;"></div>
+            </div>
+          </section>
+
+        </div><!-- /view-container -->
+      </main>
+    </div><!-- /app-layout -->
+
+    <!-- ════ INCIDENT WAR ROOM & FORENSIC MODAL ════ -->
+    <div id="inspector-modal" class="modal-overlay" role="dialog" aria-modal="true">
+      <div class="modal-dialog">
+        <div class="modal-header">
+          <div style="display:flex;align-items:center;gap:12px;min-width:0;">
+            <span id="modal-incident-id" class="badge badge-high" style="flex-shrink:0;">INC-0000</span>
+            <h3 id="modal-incident-title" style="font-size:16px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">Incident Details</h3>
+          </div>
+          <button class="btn btn-secondary btn-sm modal-close-btn" data-close-modal="inspector-modal">✕</button>
+        </div>
+
+        <div class="modal-tabs">
+          <button class="tab-btn active" data-tab="tab-overview">Overview</button>
+          <button class="tab-btn" data-tab="tab-forensics"><i data-lucide="microscope" style="width:14px;height:14px;vertical-align:text-bottom;"></i> Forensic Evidence</button>
+          <button class="tab-btn" data-tab="tab-playbook"><i data-lucide="shield" style="width:14px;height:14px;vertical-align:text-bottom;"></i> Simulated SOAR Containment</button>
+          <button class="tab-btn" data-tab="tab-timeline"><i data-lucide="list" style="width:14px;height:14px;vertical-align:text-bottom;"></i> Audit Timeline</button>
+        </div>
+
+        <div class="modal-body">
+          <!-- Overview Tab -->
+          <div id="tab-overview" class="tab-content active">
+            <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:18px;">
+              <div><div class="card-label">Severity</div><span id="modal-severity" class="badge badge-high">HIGH</span></div>
+              <div><div class="card-label">Status</div><span id="modal-status" class="badge status-open">OPEN</span></div>
+              <div><div class="card-label">Assignee</div><div id="modal-assignee" style="font-weight:600;font-size:13px;">—</div></div>
+              <div><div class="card-label">SLA Deadline</div><div id="modal-sla" style="font-family:'JetBrains Mono',monospace;font-size:12px;">—</div></div>
+            </div>
+
+            <div class="card-label">Incident Context &amp; Likely Root Cause</div>
+            <p id="modal-desc" style="color:var(--text-secondary);line-height:1.65;font-size:13px;margin-bottom:16px;white-space:pre-wrap;"></p>
+          </div>
+
+          <!-- Forensic Evidence Tab -->
+          <div id="tab-forensics" class="tab-content">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+              <span class="card-label">Forensic Evidence Package (.JSON)</span>
+              <button id="download-forensics-btn" class="btn btn-primary btn-sm"><i data-lucide="save" style="width:14px;height:14px;"></i> Download Forensic Report (.JSON)</button>
+            </div>
+            <div id="modal-forensic-code" class="code-snippet" style="max-height:300px;overflow-y:auto;"></div>
+          </div>
+
+          <!-- SOAR Mitigation Tab -->
+          <div id="tab-playbook" class="tab-content">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+              <span class="card-label">Automated SOAR Playbook</span>
+              <button id="execute-containment-btn" class="btn btn-danger btn-sm"><i data-lucide="zap" style="width:14px;height:14px;"></i> Execute Simulated Containment</button>
+            </div>
+            <div id="modal-playbook-content"></div>
+          </div>
+
+          <!-- Timeline Tab -->
+          <div id="tab-timeline" class="tab-content">
+            <div id="modal-timeline-stream" style="display:flex;flex-direction:column;gap:12px;margin-bottom:18px;"></div>
+            <div style="display:flex;gap:8px;margin-top:14px;padding-top:14px;border-top:1px solid var(--border-subtle);">
+              <input id="comment-input" type="text" placeholder="Add forensic note or action update..." style="flex:1;background:var(--bg-input);border:1px solid var(--border-subtle);border-radius:var(--radius-sm);padding:8px 12px;color:white;" />
+              <button id="submit-comment-btn" class="btn btn-primary btn-sm">Post Note</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ════ CREATE INCIDENT MODAL ════ -->
+    <div id="create-modal" class="modal-overlay" role="dialog" aria-modal="true">
+      <div class="modal-dialog" style="max-width:500px;">
+        <div class="modal-header">
+          <h3 style="font-size:15px;font-weight:700;">+ Create New Incident</h3>
+          <button class="btn btn-secondary btn-sm modal-close-btn" data-close-modal="create-modal">✕</button>
+        </div>
+        <form id="create-form" style="padding:22px;">
+          <div class="card-label">Title</div>
+          <input id="create-title" type="text" required placeholder="e.g. Authentication Service Anomaly" style="width:100%;background:var(--bg-input);border:1px solid var(--border-subtle);border-radius:var(--radius-sm);padding:9px 12px;color:white;margin-bottom:14px;" />
+
+          <div class="card-label">Description</div>
+          <textarea id="create-description" rows="3" placeholder="Observed symptoms or incident notes..." style="width:100%;background:var(--bg-input);border:1px solid var(--border-subtle);border-radius:var(--radius-sm);padding:9px 12px;color:white;margin-bottom:14px;"></textarea>
+
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px;">
+            <div>
+              <div class="card-label">Severity</div>
+              <select id="create-severity" style="width:100%;background:var(--bg-input);border:1px solid var(--border-subtle);border-radius:var(--radius-sm);padding:9px 12px;color:white;">
+                <option value="LOW">LOW</option>
+                <option value="MEDIUM" selected>MEDIUM</option>
+                <option value="HIGH">HIGH</option>
+                <option value="CRITICAL">CRITICAL</option>
+              </select>
+            </div>
+            <div>
+              <div class="card-label">Assignee</div>
+              <input id="create-assigned-to" type="text" required placeholder="e.g. OnCall-Alpha" style="width:100%;background:var(--bg-input);border:1px solid var(--border-subtle);border-radius:var(--radius-sm);padding:9px 12px;color:white;" />
+            </div>
+          </div>
+
+          <div style="display:flex;justify-content:flex-end;gap:8px;">
+            <button type="button" class="btn btn-secondary" data-close-modal="create-modal">Cancel</button>
+            <button type="submit" class="btn btn-primary">Create Incident</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Toast Notification Container -->
+    <div id="toast-container" class="toast-container"></div>
+
+    <!-- Application JavaScript Logic -->
+    <script src="api.js"></script>
+    <script src="charts.js"></script>
+    <script src="app.js"></script>
+  </body>
+</html>

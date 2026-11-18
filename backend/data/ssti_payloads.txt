@@ -1,0 +1,500 @@
+template=${7*7} .class.name
+template=${7*7} .class.name
+template={{7*7}} | upper
+template=${7*7}
+template=#{7*7}
+template=<%= 7*7 %> .class.name
+template={{7*7}}
+template=${7*7} .class.name
+template=<%= 7*7 %> | upper
+template=<%= 7*7 %> .class.name
+template=#{7*7} .class.name
+template=${7*7} | upper
+template=#{7*7} | upper
+template={{7*7}}
+template=${7*7} .class.name
+template=<%= 7*7 %> | upper
+template=#{7*7} .class.name
+template=#{7*7} | upper
+template=<%= 7*7 %> | upper
+template=<%= 7*7 %> | upper
+template={{7*7}}
+template=#{7*7}
+template=${7*7} | upper
+template=#{7*7} .class.name
+template=<%= 7*7 %> .class.name
+template=<%= 7*7 %>
+template=<%= 7*7 %>
+template=<%= 7*7 %>
+template={{7*7}} | upper
+template=<%= 7*7 %> | upper
+template=#{7*7} | upper
+template=${7*7} .class.name
+template={{7*7}} .class.name
+template=<%= 7*7 %>
+template=<%= 7*7 %> .class.name
+template=<%= 7*7 %> | upper
+template=#{7*7} | upper
+template=<%= 7*7 %> | upper
+template=#{7*7} | upper
+template=${7*7}
+template=#{7*7} .class.name
+template=<%= 7*7 %> .class.name
+template=<%= 7*7 %>
+template=#{7*7} | upper
+template=${7*7}
+template={{7*7}} | upper
+template=${7*7} .class.name
+template=${7*7} | upper
+template={{7*7}}
+template=${7*7}
+template={{7*7}} .class.name
+template=#{7*7} | upper
+template={{7*7}} .class.name
+template=#{7*7} .class.name
+template=${7*7} .class.name
+template=<%= 7*7 %>
+template=<%= 7*7 %> | upper
+template=${7*7} | upper
+template=#{7*7} .class.name
+template={{7*7}} | upper
+template={{7*7}}
+template={{7*7}} .class.name
+template=<%= 7*7 %> | upper
+template=${7*7} .class.name
+template=#{7*7} .class.name
+template=#{7*7} .class.name
+template={{7*7}}
+template={{7*7}}
+template=${7*7} | upper
+template=<%= 7*7 %>
+template=${7*7}
+template={{7*7}} .class.name
+template=#{7*7} .class.name
+template=${7*7} | upper
+template={{7*7}} | upper
+template=${7*7} .class.name
+template=${7*7} .class.name
+template=#{7*7} .class.name
+template=#{7*7}
+template=${7*7} | upper
+template=<%= 7*7 %> .class.name
+template={{7*7}}
+template=<%= 7*7 %>
+template=#{7*7} | upper
+template=<%= 7*7 %> .class.name
+template={{7*7}}
+template={{7*7}}
+template={{7*7}} .class.name
+template=<%= 7*7 %>
+template=<%= 7*7 %>
+template=${7*7}
+template={{7*7}} | upper
+template=<%= 7*7 %> | upper
+template=${7*7} | upper
+template=${7*7} .class.name
+template=#{7*7} .class.name
+template=<%= 7*7 %> | upper
+template=<%= 7*7 %>
+template=<%= 7*7 %> .class.name
+template=${7*7} | upper
+template=${7*7} | upper
+template=<%= 7*7 %> .class.name
+template={{7*7}} | upper
+template=${7*7} .class.name
+template={{7*7}} | upper
+template=#{7*7}
+template=${7*7} .class.name
+template=#{7*7}
+template=${7*7} | upper
+template=<%= 7*7 %> .class.name
+template={{7*7}} | upper
+template=<%= 7*7 %> | upper
+template={{7*7}}
+template=${7*7} .class.name
+template={{7*7}} .class.name
+template=<%= 7*7 %>
+template={{7*7}} .class.name
+template={{7*7}} | upper
+template=#{7*7} | upper
+template=<%= 7*7 %> .class.name
+template={{7*7}} .class.name
+template={{7*7}} | upper
+template=${7*7}
+template={{7*7}} | upper
+template=#{7*7} | upper
+template=#{7*7} .class.name
+template={{7*7}} .class.name
+template=#{7*7} .class.name
+template=#{7*7} | upper
+template=<%= 7*7 %>
+template=${7*7} .class.name
+template=<%= 7*7 %> .class.name
+template=#{7*7}
+template=#{7*7} .class.name
+template={{7*7}}
+template=${7*7} | upper
+template=${7*7} | upper
+template={{7*7}} .class.name
+template={{7*7}} | upper
+template=<%= 7*7 %>
+template=${7*7}
+template=#{7*7} | upper
+template={{7*7}} | upper
+template=${7*7} .class.name
+template=<%= 7*7 %> .class.name
+template=<%= 7*7 %>
+template=#{7*7}
+template=#{7*7}
+template={{7*7}} .class.name
+template=<%= 7*7 %> .class.name
+template=${7*7} | upper
+template=<%= 7*7 %> .class.name
+template=${7*7} | upper
+template=<%= 7*7 %> | upper
+template=${7*7}
+template={{7*7}}
+template=${7*7}
+template=#{7*7} | upper
+template={{7*7}}
+template=#{7*7} .class.name
+template=<%= 7*7 %> | upper
+template={{7*7}} | upper
+template=<%= 7*7 %> .class.name
+template=${7*7} | upper
+template={{7*7}} | upper
+template=${7*7} | upper
+template=#{7*7}
+template=<%= 7*7 %>
+template=#{7*7} | upper
+template=${7*7}
+template={{7*7}} .class.name
+template=<%= 7*7 %>
+template=${7*7}
+template=#{7*7}
+template=${7*7} .class.name
+template=<%= 7*7 %> | upper
+template=${7*7} | upper
+template=${7*7} | upper
+template={{7*7}} .class.name
+template=<%= 7*7 %>
+template={{7*7}} .class.name
+template=#{7*7} | upper
+template=#{7*7} | upper
+template=${7*7} .class.name
+template=${7*7}
+template={{7*7}} .class.name
+template=<%= 7*7 %>
+template=<%= 7*7 %>
+template={{7*7}}
+template=${7*7} .class.name
+template={{7*7}}
+template=${7*7} | upper
+template=<%= 7*7 %> .class.name
+template=<%= 7*7 %> | upper
+template=${7*7} .class.name
+template=<%= 7*7 %> .class.name
+template={{7*7}}
+template=${7*7} .class.name
+template={{7*7}} .class.name
+template=<%= 7*7 %>
+template=<%= 7*7 %> | upper
+template=#{7*7} | upper
+template={{7*7}} | upper
+template=#{7*7} | upper
+template=${7*7} .class.name
+template={{7*7}} | upper
+template=#{7*7}
+template=#{7*7} | upper
+template=${7*7} .class.name
+template=#{7*7} | upper
+template=#{7*7} .class.name
+template={{7*7}} | upper
+template=#{7*7}
+template={{7*7}} | upper
+template=${7*7} | upper
+template=${7*7} | upper
+template=<%= 7*7 %> | upper
+template=${7*7}
+template=${7*7} | upper
+template=#{7*7} .class.name
+template=<%= 7*7 %> | upper
+template=<%= 7*7 %> .class.name
+template=#{7*7} .class.name
+template={{7*7}}
+template=#{7*7}
+template=#{7*7}
+template=#{7*7} | upper
+template=<%= 7*7 %>
+template={{7*7}}
+template=<%= 7*7 %> | upper
+template=<%= 7*7 %> .class.name
+template=#{7*7}
+template=${7*7}
+template=${7*7}
+template=#{7*7} .class.name
+template={{7*7}} | upper
+template=#{7*7}
+template=${7*7} | upper
+template=<%= 7*7 %>
+template=${7*7} | upper
+template=${7*7} .class.name
+template=${7*7}
+template=${7*7} .class.name
+template=${7*7} | upper
+template=${7*7} | upper
+template={{7*7}} .class.name
+template=<%= 7*7 %>
+template=${7*7} .class.name
+template=${7*7} | upper
+template=#{7*7} .class.name
+template=${7*7} | upper
+template={{7*7}} .class.name
+template=#{7*7}
+template=#{7*7} | upper
+template=#{7*7}
+template={{7*7}} .class.name
+template={{7*7}}
+template=#{7*7}
+template=#{7*7}
+template=${7*7} | upper
+template=#{7*7} | upper
+template=${7*7} .class.name
+template=<%= 7*7 %>
+template={{7*7}} | upper
+template=${7*7} .class.name
+template=<%= 7*7 %>
+template=${7*7}
+template=<%= 7*7 %> | upper
+template=${7*7} | upper
+template=#{7*7} | upper
+template=<%= 7*7 %>
+template=#{7*7}
+template=#{7*7} .class.name
+template=<%= 7*7 %> .class.name
+template=#{7*7} .class.name
+template={{7*7}}
+template=${7*7} .class.name
+template=#{7*7} | upper
+template=${7*7} .class.name
+template=#{7*7} .class.name
+template=<%= 7*7 %> | upper
+template=<%= 7*7 %>
+template=#{7*7}
+template={{7*7}}
+template={{7*7}}
+template=<%= 7*7 %> | upper
+template=#{7*7}
+template=<%= 7*7 %> .class.name
+template=#{7*7} .class.name
+template={{7*7}} | upper
+template=${7*7}
+template=<%= 7*7 %> | upper
+template=#{7*7}
+template=#{7*7} | upper
+template={{7*7}} | upper
+template=<%= 7*7 %> .class.name
+template={{7*7}} .class.name
+template=#{7*7} | upper
+template=<%= 7*7 %> | upper
+template={{7*7}} .class.name
+template=#{7*7} | upper
+template=#{7*7} .class.name
+template=${7*7} .class.name
+template=#{7*7} .class.name
+template={{7*7}} | upper
+template=${7*7}
+template=<%= 7*7 %> .class.name
+template={{7*7}}
+template=#{7*7} .class.name
+template=${7*7} | upper
+template=${7*7} | upper
+template=${7*7}
+template=${7*7} .class.name
+template=${7*7}
+template=${7*7}
+template=${7*7} | upper
+template={{7*7}}
+template=#{7*7}
+template=${7*7} | upper
+template=${7*7}
+template={{7*7}} | upper
+template=#{7*7} | upper
+template=<%= 7*7 %>
+template=#{7*7} .class.name
+template=#{7*7} | upper
+template={{7*7}}
+template=#{7*7} | upper
+template=<%= 7*7 %>
+template=#{7*7} .class.name
+template=${7*7} .class.name
+template=${7*7} | upper
+template=<%= 7*7 %> | upper
+template=${7*7} | upper
+template=<%= 7*7 %> | upper
+template=<%= 7*7 %> | upper
+template={{7*7}} | upper
+template=#{7*7} | upper
+template={{7*7}} .class.name
+template=#{7*7}
+template={{7*7}} .class.name
+template=#{7*7} | upper
+template={{7*7}}
+template=${7*7} .class.name
+template={{7*7}}
+template=<%= 7*7 %> .class.name
+template=#{7*7}
+template=#{7*7} .class.name
+template=<%= 7*7 %>
+template=<%= 7*7 %> .class.name
+template={{7*7}} .class.name
+template=${7*7} .class.name
+template=<%= 7*7 %> .class.name
+template=${7*7}
+template=#{7*7} | upper
+template=#{7*7} | upper
+template=<%= 7*7 %>
+template={{7*7}} .class.name
+template={{7*7}} | upper
+template=#{7*7} | upper
+template=<%= 7*7 %> | upper
+template=${7*7}
+template=<%= 7*7 %> | upper
+template=${7*7}
+template=#{7*7} | upper
+template=#{7*7}
+template=#{7*7} .class.name
+template=${7*7} .class.name
+template={{7*7}} .class.name
+template=#{7*7}
+template={{7*7}} .class.name
+template=${7*7} .class.name
+template=<%= 7*7 %>
+template={{7*7}} .class.name
+template={{7*7}} | upper
+template={{7*7}}
+template=${7*7}
+template=${7*7}
+template=${7*7} | upper
+template=<%= 7*7 %>
+template=#{7*7} | upper
+template=#{7*7}
+template=${7*7} .class.name
+template=<%= 7*7 %> | upper
+template=${7*7} | upper
+template=${7*7}
+template=#{7*7} .class.name
+template=#{7*7}
+template={{7*7}}
+template=<%= 7*7 %> | upper
+template=${7*7} | upper
+template=${7*7}
+template=#{7*7}
+template=<%= 7*7 %>
+template=${7*7} .class.name
+template=${7*7} .class.name
+template=<%= 7*7 %>
+template=${7*7}
+template=#{7*7}
+template=#{7*7} | upper
+template={{7*7}} .class.name
+template=${7*7}
+template={{7*7}} | upper
+template=<%= 7*7 %>
+template=#{7*7} | upper
+template=${7*7} | upper
+template={{7*7}} | upper
+template=<%= 7*7 %> .class.name
+template={{7*7}} | upper
+template=#{7*7} | upper
+template=#{7*7} .class.name
+template=<%= 7*7 %> | upper
+template={{7*7}}
+template=#{7*7} | upper
+template=${7*7}
+template={{7*7}} | upper
+template={{7*7}}
+template=<%= 7*7 %> .class.name
+template=${7*7}
+template={{7*7}}
+template={{7*7}}
+template=${7*7}
+template={{7*7}} .class.name
+template=${7*7} | upper
+template={{7*7}} .class.name
+template={{7*7}} | upper
+template=#{7*7} | upper
+template=${7*7}
+template={{7*7}}
+template=<%= 7*7 %> .class.name
+template=${7*7} .class.name
+template={{7*7}} .class.name
+template=${7*7} | upper
+template={{7*7}} | upper
+template={{7*7}}
+template=<%= 7*7 %> | upper
+template=#{7*7}
+template=<%= 7*7 %> .class.name
+template=${7*7} .class.name
+template=${7*7} .class.name
+template={{7*7}}
+template=${7*7} .class.name
+template=<%= 7*7 %>
+template=#{7*7} .class.name
+template=<%= 7*7 %>
+template=<%= 7*7 %> | upper
+template=#{7*7} | upper
+template=#{7*7} .class.name
+template=<%= 7*7 %> | upper
+template=${7*7} | upper
+template=${7*7}
+template={{7*7}} | upper
+template=#{7*7} | upper
+template=${7*7} .class.name
+template={{7*7}} | upper
+template=<%= 7*7 %>
+template=${7*7} .class.name
+template=${7*7} | upper
+template=#{7*7} .class.name
+template=<%= 7*7 %> .class.name
+template={{7*7}} .class.name
+template=#{7*7} .class.name
+template=<%= 7*7 %> | upper
+template=${7*7}
+template=#{7*7} .class.name
+template=<%= 7*7 %> .class.name
+template=<%= 7*7 %> | upper
+template=<%= 7*7 %> .class.name
+template=${7*7}
+template={{7*7}} | upper
+template={{7*7}} .class.name
+template={{7*7}} | upper
+template=#{7*7} .class.name
+template=${7*7} .class.name
+template=${7*7} .class.name
+template=<%= 7*7 %> .class.name
+template={{7*7}} .class.name
+template=<%= 7*7 %> .class.name
+template=${7*7} | upper
+template=<%= 7*7 %>
+template=${7*7} .class.name
+template=#{7*7}
+template={{7*7}} | upper
+template=#{7*7}
+template={{7*7}}
+template={{7*7}}
+template=${7*7} | upper
+template=${7*7}
+template={{7*7}}
+template=${7*7}
+template=#{7*7}
+template=#{7*7} .class.name
+template={{7*7}} | upper
+template={{7*7}} | upper
+template=#{7*7}
+template=#{7*7}
+template={{7*7}}
+template={{7*7}} | upper
+template=${7*7} | upper
+template=${7*7} .class.name
+template=${7*7} .class.name

@@ -1,0 +1,32 @@
+{
+  "name": "aapki-nazar-soc",
+  "version": "2.0.0",
+  "description": "Aapki Nazar — Next-Gen Incident Command & Automated SOC Threat Intelligence Platform",
+  "main": "backend/server.js",
+  "scripts": {
+    "start": "node backend/server.js",
+    "reset": "node -e \"require('./backend/services/localDbService').resetDatabase(); console.log('✨ SOC Dashboard reset to fresh starter state!');\""
+  },
+  "keywords": [
+    "soc",
+    "siem",
+    "soar",
+    "cybersecurity",
+    "threat-intelligence",
+    "incident-response",
+    "mitre-attack",
+    "shannon-entropy",
+    "websockets"
+  ],
+  "author": "Security Engineering Team",
+  "license": "MIT",
+  "dependencies": {
+    "better-sqlite3": "^13.0.3",
+    "cors": "^2.8.5",
+    "dotenv": "^16.6.1",
+    "express": "^4.18.2",
+    "express-rate-limit": "^8.6.2",
+    "socket.io": "^4.8.3",
+    "uuid": "^9.0.0"
+  }
+}
