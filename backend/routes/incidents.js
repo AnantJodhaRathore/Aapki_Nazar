@@ -13,6 +13,8 @@ router.get("/export/csv", async (req, res) => {
       "Title", 
       "Severity", 
       "Status", 
+      "Event Source",
+      "WAF Transaction ID",
       "Assigned To", 
       "Threat Type",
       "MITRE ATT&CK",
@@ -31,11 +33,13 @@ router.get("/export/csv", async (req, res) => {
         payloadObj = inc.payload;
       }
       
-      const sourceIp = payloadObj.normalizedLog?.sourceIp || "N/A";
-      const targetPath = payloadObj.normalizedLog?.path || "N/A";
+      const sourceIp = payloadObj.ip || payloadObj.sourceIp || payloadObj.normalizedLog?.sourceIp || "N/A";
+      const targetPath = payloadObj.path || payloadObj.normalizedLog?.path || "N/A";
       const rawLog = payloadObj.rawLog || "";
-      const threatScore = inc.description ? (inc.description.match(/Threat Score: (\d+)/)?.[1] || "N/A") : "N/A";
+      const threatScore = payloadObj.threatScore || (inc.description ? (inc.description.match(/Threat (?:Risk )?Score: (\d+)/)?.[1] || "N/A") : "N/A");
       let mitre = inc.mitreTechnique || "N/A";
+      const eventSource = inc.eventSource || (inc.assignedTo === 'OWASP-CRS-Engine' ? 'OFFICIAL_CRS' : 'CUSTOM_WAF');
+      const wafTxId = inc.wafTransactionId || payloadObj.transactionId || "N/A";
 
       return [
         `"${inc.incidentId || ''}"`,
@@ -43,6 +47,8 @@ router.get("/export/csv", async (req, res) => {
         `"${(inc.title || '').replace(/"/g, '""')}"`,
         `"${inc.severity || ''}"`,
         `"${inc.status || ''}"`,
+        `"${eventSource}"`,
+        `"${wafTxId}"`,
         `"${(inc.assignedTo || '').replace(/"/g, '""')}"`,
         `"${inc.threatType || ''}"`,
         `"${mitre.replace(/"/g, '""')}"`,

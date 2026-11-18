@@ -36,7 +36,9 @@ async function createIncident(body) {
     comments: [],
     timeline: [],
     createdAt: now,
-    updatedAt: now
+    updatedAt: now,
+    eventSource: body.eventSource || "CUSTOM_WAF",
+    wafTransactionId: body.wafTransactionId || null
   };
 
   const createdIncident = await db.createIncident(incident);

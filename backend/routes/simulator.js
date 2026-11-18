@@ -3,28 +3,57 @@ const simulatorService = require("../services/simulatorService");
 
 const router = express.Router();
 
+// GET /api/simulator/status
 router.get("/status", (req, res) => {
-  res.json(simulatorService.getStatus());
+  try {
+    const status = simulatorService.getStatus();
+    res.json(status);
+  } catch (err) {
+    res.status(500).json({ error: "Failed to get simulator status", details: err.message });
+  }
 });
 
+// POST /api/simulator/start
 router.post("/start", (req, res) => {
-  let interval = parseInt(req.body.interval, 10) || 1500;
-  interval = Math.max(100, Math.min(interval, 10000));
-  let attackRatio = parseFloat(req.body.attackRatio);
-  if (isNaN(attackRatio)) attackRatio = 0.35;
-  attackRatio = Math.max(0, Math.min(attackRatio, 1));
-  const result = simulatorService.startSimulator(req.io, interval, attackRatio);
-  res.json(result);
+  try {
+    const result = simulatorService.startSimulator(req.io, req.body || {});
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ error: "Failed to start simulator", details: err.message });
+  }
 });
 
+// POST /api/simulator/stop
 router.post("/stop", (req, res) => {
-  const result = simulatorService.stopSimulator();
-  res.json(result);
+  try {
+    const result = simulatorService.stopSimulator();
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ error: "Failed to stop simulator", details: err.message });
+  }
 });
 
-router.post("/inject-single", (req, res) => {
-  const sample = simulatorService.generateSingleLog();
-  res.json(sample);
+// POST or PATCH /api/simulator/config - Live settings update without restart!
+const handleConfigUpdate = (req, res) => {
+  try {
+    const result = simulatorService.updateConfig(req.body || {});
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ error: "Failed to update simulator configuration", details: err.message });
+  }
+};
+
+router.post("/config", handleConfigUpdate);
+router.patch("/config", handleConfigUpdate);
+
+// POST /api/simulator/reset
+router.post("/reset", (req, res) => {
+  try {
+    simulatorService.resetCounters();
+    res.json({ success: true, message: "Simulator counters reset" });
+  } catch (err) {
+    res.status(500).json({ error: "Failed to reset counters", details: err.message });
+  }
 });
 
 module.exports = router;

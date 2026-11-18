@@ -1,0 +1,45 @@
+services:
+  protected-app:
+    build:
+      context: ./docker/protected-app
+      dockerfile: Dockerfile
+    container_name: aapki-nazar-protected-app
+    restart: unless-stopped
+    # Direct host bypass removed - traffic must traverse the WAF gateway
+    networks:
+      - aapki-nazar-net
+
+  modsec-crs:
+    image: owasp/modsecurity-crs:nginx-alpine@sha256:873ce68a658d2e3b61484a8a24d215f7d15456e7ce5aec5e7114bf000d743365
+    container_name: aapki-nazar-modsec-crs
+    restart: unless-stopped
+    depends_on:
+      - protected-app
+    ports:
+      - "8080:8080"
+    environment:
+      - PORT=8080
+      - BACKEND=http://protected-app:3000
+      - SERVER_NAME=localhost
+      - MODSEC_RULE_ENGINE=${MODSEC_RULE_ENGINE:-on}
+      - MODSEC_AUDIT_ENGINE=RelevantOnly
+      - MODSEC_AUDIT_LOG_FORMAT=JSON
+      - MODSEC_AUDIT_LOG_TYPE=Serial
+      - MODSEC_AUDIT_LOG=/var/log/modsecurity/audit.log
+      - MODSEC_AUDIT_LOG_PARTS=ABIJDEFHZ
+      - MODSEC_AUDIT_LOG_RELEVANT_STATUS=^(?:5|4(?!04))
+      - ANOMALY_INBOUND=5
+      - ANOMALY_OUTBOUND=4
+      - BLOCKING_PARANOIA=1
+      - CORS_HEADER_403_ALLOW_ORIGIN=*
+      - CORS_HEADER_403_ALLOW_METHODS=GET, POST, PUT, DELETE, OPTIONS
+      - CORS_HEADER_403_CONTENT_TYPE=application/json
+      - CORS_HEADER_ACCESS_CONTROL_ALLOW_HEADERS=*
+    volumes:
+      - ./waf-logs:/var/log/modsecurity
+    networks:
+      - aapki-nazar-net
+
+networks:
+  aapki-nazar-net:
+    driver: bridge

@@ -786,6 +786,10 @@ body {
 .status-in_progress { background: rgba(139, 92, 246, 0.12); color: var(--status-progress); border-color: rgba(139,92,246,0.3); }
 .status-resolved    { background: rgba(52, 211, 153, 0.1);  color: var(--status-resolved); border-color: rgba(52,211,153,0.25); }
 
+.badge-crs          { background: rgba(56, 189, 248, 0.15);  color: #38bdf8; border-color: rgba(56,189,248,0.35); font-weight: 700; }
+.badge-custom-waf   { background: rgba(192, 132, 252, 0.15); color: #c084fc; border-color: rgba(192,132,252,0.35); font-weight: 700; }
+.badge-simulated    { background: rgba(148, 163, 184, 0.12); color: #94a3b8; border-color: rgba(148,163,184,0.25); font-weight: 600; }
+
 /* ═══════════════════════════════════════════
    FORM INPUTS
    ═══════════════════════════════════════════ */
@@ -932,11 +936,35 @@ input[type="range"]::-webkit-slider-thumb {
   border: 2px solid #fff !important;
 }
 
+.tool-tab-panel {
+  display: none;
+}
+.tool-tab-panel.active {
+  display: block;
+  animation: view-enter 0.18s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+.source-tag {
+  font-family: var(--font-mono);
+  display: inline-block;
+}
+
 .slider-crimson::-webkit-slider-thumb {
   width: 18px !important; height: 18px !important;
   background: var(--sev-crit) !important;
   box-shadow: 0 0 12px rgba(220, 38, 38, 0.6) !important;
   border: 2px solid #fff !important;
+}
+
+.tool-tab-panel {
+  display: none;
+}
+.tool-tab-panel.active {
+  display: block;
+  animation: view-enter 0.18s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+.source-tag {
+  font-family: var(--font-mono);
+  display: inline-block;
 }
 
 /* ═══════════════════════════════════════════
@@ -1133,3 +1161,204 @@ input[type="range"]::-webkit-slider-thumb {
   outline-offset: 2px;
   border-radius: var(--r-xs);
 }
+
+/* ═══════════════════════════════════════════
+   MITRE ATT&CK ENTERPRISE MATRIX NAVIGATOR
+   ═══════════════════════════════════════════ */
+.mitre-matrix-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 14px;
+  margin-top: 18px;
+}
+
+.mitre-tactic-col {
+  background: rgba(12, 17, 29, 0.7);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.mitre-tactic-header {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--violet-400);
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border-subtle);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.mitre-tech-card {
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  padding: 9px 11px;
+  transition: all 0.2s ease;
+  position: relative;
+}
+
+.mitre-tech-card:hover {
+  border-color: var(--violet-500);
+  background: rgba(139, 92, 246, 0.05);
+  transform: translateY(-1px);
+}
+
+.mitre-tech-card.active-threat {
+  background: rgba(220, 38, 38, 0.12);
+  border-color: var(--sev-crit);
+  box-shadow: 0 0 14px rgba(220, 38, 38, 0.25);
+}
+
+.mitre-tech-id {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--text-muted);
+  margin-bottom: 3px;
+}
+
+.mitre-tech-card.active-threat .mitre-tech-id {
+  color: #fca5a5;
+}
+
+.mitre-tech-name {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-primary);
+  line-height: 1.35;
+}
+
+.mitre-tech-hits {
+  font-size: 10px;
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 700;
+  color: var(--status-resolved);
+  margin-top: 5px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.mitre-tech-card.active-threat .mitre-tech-hits {
+  color: var(--sev-crit);
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   PHASE 2 — ATTACK CAMPAIGNS & CONTEXTUAL THREAT PRIORITIZATION
+   ═══════════════════════════════════════════════════════════════════ */
+
+.badge-simulation {
+  background: rgba(168, 85, 247, 0.15);
+  border: 1px solid rgba(168, 85, 247, 0.4);
+  color: #c084fc;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  padding: 2px 7px;
+  border-radius: var(--r-xs);
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.badge-real-ip {
+  background: rgba(56, 189, 248, 0.12);
+  border: 1px solid rgba(56, 189, 248, 0.35);
+  color: #38bdf8;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  padding: 2px 7px;
+  border-radius: var(--r-xs);
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.badge-risk-crit {
+  background: rgba(220, 38, 38, 0.18);
+  border: 1px solid rgba(220, 38, 38, 0.5);
+  color: #f87171;
+  font-weight: 700;
+}
+
+.badge-risk-high {
+  background: rgba(249, 115, 22, 0.18);
+  border: 1px solid rgba(249, 115, 22, 0.5);
+  color: #fb923c;
+  font-weight: 700;
+}
+
+.badge-risk-mod {
+  background: rgba(245, 158, 11, 0.18);
+  border: 1px solid rgba(245, 158, 11, 0.5);
+  color: #fbbf24;
+  font-weight: 700;
+}
+
+.badge-risk-low {
+  background: rgba(16, 185, 129, 0.15);
+  border: 1px solid rgba(16, 185, 129, 0.4);
+  color: #34d399;
+  font-weight: 700;
+}
+
+.factor-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.factor-label-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 11.5px;
+}
+
+.factor-bar-track {
+  height: 6px;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.06);
+  overflow: hidden;
+  position: relative;
+}
+
+.factor-bar-fill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.4s ease;
+}
+
+.progression-step-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 10px 12px;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid var(--border-1);
+  border-radius: var(--r-sm);
+  position: relative;
+}
+
+.progression-step-badge {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: rgba(139, 92, 246, 0.2);
+  border: 1px solid var(--violet-500);
+  color: var(--violet-300);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  font-weight: 800;
+  flex-shrink: 0;
+}
+
+

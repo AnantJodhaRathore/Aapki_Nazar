@@ -1,90 +1,216 @@
-# 🛡️ Aapki Nazar: Next-Gen Automated SOC & SIEM Platform
+# Aapki Nazar: Web Application SOC & Autonomous OWASP WAF Defense Platform
 
-[![Node.js](https://img.shields.io/badge/Node.js-18.x-green.svg)](https://nodejs.org/)
-[![Status](https://img.shields.io/badge/Status-Active-success.svg)]()
-[![License](https://img.shields.io/badge/License-MIT-blue.svg)]()
+[![Node.js](https://img.shields.io/badge/Node.js-18.x+-green.svg)](https://nodejs.org/)
+[![OWASP CRS](https://img.shields.io/badge/Sensor-OWASP%20CRS%20v3.3%2Fv4.0-blue.svg)](https://coreruleset.org/)
+[![Gateway Defense](https://img.shields.io/badge/Defense-Active%20403%20Firewall-crimson.svg)]()
+[![License](https://img.shields.io/badge/License-MIT-purple.svg)]()
 
-**Aapki Nazar** is a real-time, Automated Security Operations Center (SOC) and SIEM platform designed for multi-vector threat detection, live telemetry streaming, and automated incident triage. It natively ingests massive gigabyte-scale academic and enterprise datasets to dynamically simulate, detect, and escalate cyber attacks.
+**Aapki Nazar** ("Your Watch" / "Your Vision") is an **Autonomous Web Application Security Operations Center (SOC)** and active API gateway defense platform. 
+
+Sitting directly in the inbound traffic path, it inspects live HTTP traffic using an **OWASP Core Rule Set (CRS)** WAF engine, calculates explainable threat scores with Shannon entropy and velocity heuristics, streams real-time telemetry to an interactive Kanban command center, and **actively blocks contained attacker IPs (`HTTP 403 Forbidden`)** in real time.
 
 ---
 
-## 🎯 1. Project Overview & Novelty
+## 1. Key Highlights & Architectural Identity
 
-Modern network environments produce overwhelming volumes of telemetry data. Manually analyzing unstructured logs across varying formats introduces significant detection latency and analyst fatigue. 
+* **Dual-Layer Inspection Architecture:**
+  * **Layer 1: Official OWASP Core Rule Set (CRS v4.30.0 / ModSecurity v3.0.17)** running inside an official Nginx reverse proxy via Docker Desktop on port 8080. Actively enforces HTTP 403 Forbidden blocking for attacks exceeding the inbound anomaly threshold (`ANOMALY_INBOUND=5`).
+  * **Layer 2: Aapki Nazar Novelty & Heuristic Sensor** running in-process on Node.js (port 3001) evaluating multi-pass URL decoding, Shannon entropy ($H > 5.8$), and sliding-window velocity metrics.
+* **Harmless Protected Demo Application:** Runs inside the isolated Docker network (`aapki-nazar-net`). All traffic to the demo service must traverse the ModSecurity WAF reverse proxy (direct host bypass port 3002 is closed).
+* **Real-time Tail Ingestion Engine (`crsIngestionService.js`):** Continuously tails ModSecurity's serial JSON audit log (`./waf-logs/audit.log`) tracking byte offsets with chunked-line buffering, deduplicating transaction IDs, and mapping rules to the MITRE ATT&CK Framework.
+* **Strict Incident Creation Policy:**
+  * Protocol warnings on benign requests (`HTTP 200 OK`) are logged in `waf_events` without cluttering the incident command triage board.
+  * Confirmed blocks (`HTTP 403 Forbidden`) and high-severity exploit signatures (`942` SQLi, `941` XSS, `932` RCE, `930` LFI) automatically generate actionable SOC incidents.
+* **Real Active SOAR Defense (The Real 403 Block):**
+  * When an analyst clicks **"Execute Active 403 Containment"** on the dashboard, the attacker's IP is added to the active gateway firewall blacklist.
+  * The attacker's subsequent requests receive an immediate **`HTTP 403 Forbidden: Access Denied: Your IP address has been contained by Aapki Nazar SOC`** in under 15ms.
+* **Live Attacker CLI Cyber Range (`attack.js`):** A standalone, zero-dependency Node.js attack tool supporting `--target crs` (Port 8080) and `--target soc` (Port 3001) for live demonstrations.
 
-**Our Solution:** Aapki Nazar demonstrates an automated approach to parsing, analyzing, prioritizing, and triaging security incidents with deterministic explainability. It integrates format-agnostic log normalization, configurable signature detection, entropy/velocity-based behavioral indicators, forensic evidence packaging, and simulated SOAR (Security Orchestration, Automation, and Response) into a single, lightweight workflow.
+---
 
-## 🏗️ 2. Architecture & Data Flow
+## 2. Platform Architecture Diagram
 
-The platform operates on a decoupled Node.js microservice architecture over an embedded SQLite persistence layer.
-
-```mermaid
-graph TD;
-    A[Traffic & Chaos Engine] -->|Live Streaming via WebSockets| B(Log Normalizer);
-    B --> C{SOC Detection Core};
-    C -->|Regex Signatures| D[Threat Scorer];
-    C -->|Shannon Entropy Analysis| D;
-    C -->|Velocity Analysis| D;
-    D -->|If Threat Detected| E[(SQLite Incident DB)];
-    E --> F[React SPA Dashboard];
-    F -->|REST API| G[Automated SOAR Playbooks];
+```
+[Attacker Terminal (attack.js) / Browser / API Clients]
+                           │
+                           ▼
+┌────────────────────────────────────────────────────────┐
+│ 1. ACTIVE GATEWAY FIREWALL MIDDLEWARE (Port 3001)       │
+│    - Active Blacklist Filter: Drops contained IPs (403) │
+│    - Latency: < 15ms response                          │
+└──────────────────────────┬─────────────────────────────┘
+                           │ (Permitted IP)
+                           ▼
+┌────────────────────────────────────────────────────────┐
+│ 2. OWASP WAF SENSOR (OWASP Core Rule Set CRS)          │
+│    - 942100: SQL Injection (Union, Blind, Sleep)       │
+│    - 941100: Cross-Site Scripting (XSS, DOM, scripts)  │
+│    - 932100: Remote Command Injection (CMDi, Shell)    │
+│    - 934100: Server-Side Request Forgery (SSRF)        │
+│    - 930100: Path Traversal & LFI (../, /etc/passwd)   │
+│    - 944100: Log4Shell & JNDI Remote Code Probes       │
+└──────────────────────────┬─────────────────────────────┘
+                           │ (Security Alert Event)
+                           ▼
+┌────────────────────────────────────────────────────────┐
+│ 3. AAPKI NAZAR SOC INTELLIGENCE BRAIN                  │
+│    - Multi-Pass URL Decoding (2 levels deep)           │
+│    - Shannon Entropy Obfuscation Engine (H > 5.8)      │
+│    - 10-Second Sliding-Window IP Velocity Tracker      │
+│    - Composite Threat Risk Scoring (0 - 100)           │
+│    - 15-Minute Correlation & Deduplication Cache       │
+│    - MITRE ATT&CK Framework Auto-Classifier           │
+└──────────────────────────┬─────────────────────────────┘
+                           │ (WebSocket Push)
+                           ▼
+┌────────────────────────────────────────────────────────┐
+│ 4. INCIDENT COMMAND CENTER (The Kanban Dashboard)      │
+│    - Real-Time WebSocket stream (Socket.io)            │
+│    - Interactive Kanban Board (OPEN -> IN PROGRESS)    │
+│    - War Room Modal with Code Fix & Forensics          │
+│    - Active Gateway Blacklist Manager (with Unblock)   │
+└──────────────────────────┬─────────────────────────────┘
+                           │ (Analyst clicks "Execute Containment")
+                           ▼
+┌────────────────────────────────────────────────────────┐
+│ 5. ACTIVE SOAR GATEWAY CONTAINMENT (REAL 403 BLOCK)    │
+│    - Attacker IP added to Active Gateway Blacklist     │
+│    - Attacker's next request receives HTTP 403!        │
+└────────────────────────────────────────────────────────┘
 ```
 
-## 🔍 3. 5-Stage Detection Pipeline
+---
 
-1. **Universal Normalization:** Heuristically extracts routing and payload data from varying formats (AWS CloudTrail, Splunk Syslog, Apache CLF).
-2. **Signature Detection:** Executes bounded multi-pass decoding followed by configurable Regex rule matching (e.g., SQLi, XSS, CMDi, SSRF).
-3. **Velocity Analysis:** Tracks request rates via an in-memory sliding window cache to detect DDoS and Brute Force anomalies.
-4. **Entropy Analysis:** Calculates Localized Shannon Entropy ($H > 5.8$) on payload contents to detect obfuscated attacks or packed exploit code.
-5. **Composite Scoring:** Deterministically aggregates risk variables to prioritize analyst attention.
+## 3. Live Attacker CLI Cyber Range (`attack.js`)
 
-## 📊 4. The Data Engine (110k+ Real Logs)
+Aapki Nazar includes a standalone command-line cyber range tool to demonstrate the full attack, detection, and active containment lifecycle.
 
-Unlike standard simulators that rely on synthetic strings, Aapki Nazar is powered by a massive hybrid engine of real-world academic and enterprise data:
+```bash
+# Benign Traffic (Baseline)
+node attack.js --type clean
 
-- **CSIC 2010 Academic HTTP Dataset:** 36,000 real-world normal requests and 24,000+ hand-crafted anomalous web attacks.
-- **Benign Traffic Baseline:** Native, unmodified Apache Server Access Logs and AWS CloudTrail API events.
-- **Splunk BOTS v3:** Raw Windows and enterprise SIEM log excerpts.
-- **SecLists & OWASP Core Rule Set:** Live ingestion of highly advanced enterprise fuzzing dictionaries and ModSecurity regressions.
+# Exploit Probes
+node attack.js --type sqli          # SQL Injection (OWASP-CRS-942100)
+node attack.js --type xss           # Cross-Site Scripting (OWASP-CRS-941100)
+node attack.js --type cmdi          # Command Injection (OWASP-CRS-932100)
+node attack.js --type log4j         # Log4Shell RCE (OWASP-CRS-944100)
+node attack.js --type ssrf          # Cloud Metadata SSRF (OWASP-CRS-934100)
+node attack.js --type lfi           # Path Traversal (OWASP-CRS-930100)
+node attack.js --type bruteforce    # 36 Rapid Requests Velocity Spike
 
-## 🚨 5. Incident Management & Risk Scoring
-
-Incidents automatically transition through a strict state machine (`OPEN` → `IN_PROGRESS` → `RESOLVED`). The Threat Score is deterministically bounded to a maximum of 100, calculated as follows:
-
-* **Base Severity Limits:** LOW (25), MEDIUM (50), HIGH (75), CRITICAL (90)
-* **Algorithmic Modifiers:**
-  * *High Entropy Payload:* +10 Points
-  * *Velocity Anomaly:* +15 Points
-  * *Multiple Rule Violations:* +5 Points (per additional trigger)
-
-All detections are systematically mapped to the **MITRE ATT&CK Framework** (e.g., *T1190: Exploit Public-Facing Application*) for industry-standard compliance.
+# Full Automated Suite
+node attack.js --all
+```
 
 ---
 
-## 🚀 6. Installation & Setup
+## 4. The Review Demonstration Walkthrough (Step-by-Step)
+
+For your faculty or panel review, set up a **side-by-side split screen**:
+* **Left Screen:** Terminal with `node attack.js`
+* **Right Screen:** Browser with `http://localhost:3001`
+
+### Step 1: Normal Traffic Baseline
+1. In the terminal, run: `node attack.js --type clean`
+2. **Terminal:** Prints `[CLEAN TRAFFIC] HTTP 200 OK`.
+3. **Dashboard:** Live terminal stream displays a green `[CLEAN TRAFFIC] 200 OK` entry. No incident tickets created.
+
+### Step 2: Live Exploit Injection
+1. In the terminal, run: `node attack.js --type sqli`
+2. **Terminal:** Shows latency (20ms) and indicates `[ALERT] OWASP WAF ALERT TRIGGERED! Ticket Created`.
+3. **Dashboard:** Telemetry stream logs a red `[OWASP WAF ALERT] OWASP-CRS-942100: SQL Injection from 127.0.0.1` and automatically moves a new incident card into the `OPEN` Kanban column.
+
+### Step 3: SOC Triage & Root Cause Analysis
+1. On the dashboard, click on the newly created incident ticket.
+2. Show the faculty:
+   * **OWASP CRS Rule ID:** `OWASP-CRS-942100`
+   * **MITRE ATT&CK Mapping:** `T1190: Exploit Public-Facing Application`
+   * **Threat Risk Score:** 75/100 (HIGH)
+   * **Extracted Exploit Payload:** `' UNION SELECT null, username, password FROM users...`
+   * **Code Remediation:** Parameterized queries example.
+
+### Step 4: Autonomous SOAR Containment (The Climax)
+1. Click **"Execute Active 403 Containment (127.0.0.1)"**.
+2. The ticket automatically moves to `RESOLVED`, an audit comment is appended, and the IP is registered in the active gateway blacklist.
+3. Show the **"Gateway Blacklist (1)"** button in the top bar.
+
+### Step 5: Active Defense Verification
+1. In the attacker terminal, re-run: `node attack.js --type sqli`
+2. **Terminal:** Immediately receives:
+   ```text
+   HTTP Status Code: 403 FORBIDDEN
+   [CONTAINED] ACTIVE SOAR GATEWAY CONTAINMENT ENFORCED!
+   Server Response: Access Denied: Your IP address has been contained by Aapki Nazar SOC.
+   Contained IP:    127.0.0.1
+   [CONFIRMED] Active Defense Proven: Attacker is completely locked out of the network.
+   ```
+3. **Dashboard:** Telemetry logs an amber `[GATEWAY 403 BLOCK] Dropped request from contained IP 127.0.0.1`.
+
+### Step 6: Restoration of Service (Unblock)
+1. Click **Gateway Blacklist** in the top bar.
+2. Click **"Release / Unblock"** next to `127.0.0.1`.
+3. Re-run `node attack.js --type clean` $\rightarrow$ Access is restored (`HTTP 200 OK`).
+
+---
+
+## 5. Installation & Setup
 
 ### Prerequisites
-- Node.js v16.x or higher installed.
+* **Node.js:** v18.x or higher installed.
 
-### Start the Platform
+### Quick Start
 ```bash
 # 1. Install dependencies
 npm install
 
-# 2. Boot the server and Chaos Engine
+# 2. Start Official OWASP CRS Gateway & Protected Demo Service via Docker
+docker compose up -d
+
+# 3. Start the Aapki Nazar SOC application
 npm start
 ```
-Navigate to: **[http://localhost:3001](http://localhost:3001)**
 
-### Dashboard Reset
-To wipe all live alerts and reset the SQLite database to a pristine, 0-alert state for demonstrations:
+Navigate to: **`http://localhost:3001`**
+
+### Controlled Cyber Range Attack Testing
+```bash
+# Test benign request through CRS gateway (HTTP 200 OK)
+node attack.js --target crs --type clean
+
+# Test SQL Injection through CRS gateway (HTTP 403 Forbidden Drop)
+node attack.js --target crs --type sqli
+
+# Test Cross-Site Scripting through CRS gateway (HTTP 403 Forbidden Drop)
+node attack.js --target crs --type xss
+
+# Test Path Traversal / LFI through CRS gateway (HTTP 403 Forbidden Drop)
+node attack.js --target crs --type lfi
+```
+
+### Reset Dashboard
+To wipe incidents and reset the database to a clean 0-alert baseline:
 ```bash
 npm run reset
 ```
 
 ---
 
-## ⚠️ 7. Limitations & Future Work
-- **Authentication:** The current build is a laboratory/demo platform and lacks production multi-tenant RBAC (Role-Based Access Control).
-- **Simulated Containment:** While the SOAR engine recommends real-world firewall and IP table commands, executions are simulated to prevent accidental root-level OS modifications during academic demonstrations.
-- **Future Integrations:** Future iterations could incorporate direct AWS WAF API hooks via Lambda and statistical Machine Learning models to supplement the deterministic rules engine.
+## 6. API Reference Summary
+
+| Endpoint | Method | Description |
+| :--- | :--- | :--- |
+| `/api/health` | `GET` | Health check & active sensor status (`OWASP-WAF-CRS-v3.3`) |
+| `/api/waf/status` | `GET` | Returns CRS version, active rules list, and inspection stats |
+| `/api/waf/test` | `POST` | Browser/API quick-trigger for simulated cyber range attacks |
+| `/api/waf/products` | `GET` | Sample protected web route (inspects query parameters) |
+| `/api/waf/login` | `POST` | Sample protected auth route (inspects POST body & headers) |
+| `/api/containment/:incidentId/contain` | `POST` | Blacklists attacker IP and updates incident to `RESOLVED` |
+| `/api/containment/:ip/release` | `POST` | Unblocks contained IP and restores network access |
+| `/api/containment/blacklist` | `GET` | Lists all active blacklisted IPs with metadata |
+| `/incidents` | `GET/POST` | Manages incident tickets on the Kanban board |
+| `/dashboard` | `GET` | Aggregated SOC operational analytics and metrics |
+
+---
+
+## License
+MIT License. Built for cybersecurity education, research, and technical project demonstrations.

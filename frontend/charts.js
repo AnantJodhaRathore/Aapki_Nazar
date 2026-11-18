@@ -169,16 +169,17 @@ function initCharts() {
 function updateCharts(data) {
   if (!data) return;
 
-  if (vectorChartInstance && data.attackTypeBreakdown) {
-    const labels = Object.keys(data.attackTypeBreakdown);
-    const values = Object.values(data.attackTypeBreakdown);
+  if (vectorChartInstance) {
+    const breakdown = data.attackTypeBreakdown || {};
+    const labels = Object.keys(breakdown);
+    const values = Object.values(breakdown);
 
     const palette = [
       "#dc2626", "#8b5cf6", "#fb923c", "#fbbf24",
       "#38bdf8", "#334155", "#6d28d9", "#475569"
     ];
 
-    if (labels.length > 0) {
+    if (data.total > 0 && labels.length > 0 && values.some(v => v > 0)) {
       vectorChartInstance.data.labels = labels;
       vectorChartInstance.data.datasets[0].data = values;
       vectorChartInstance.data.datasets[0].backgroundColor = labels.map((_, i) => palette[i % palette.length]);
@@ -206,7 +207,19 @@ function pushRealtimeData(stats) {
   const currentTotal   = stats.totalGenerated || 0;
   const currentThreats = stats.threatsBlocked  || 0;
 
-  if (lastTotal === null) { lastTotal = currentTotal; lastThreats = currentThreats; return; }
+  const now = new Date();
+  const timeLabel = now.toLocaleTimeString([], { hour12: false });
+  const chart = timelineChartInstance;
+
+  if (lastTotal === null) {
+    lastTotal = currentTotal;
+    lastThreats = currentThreats;
+    chart.data.labels.push(timeLabel);
+    chart.data.datasets[0].data.push(Math.max(0, currentThreats));
+    chart.data.datasets[1].data.push(Math.max(1, currentTotal));
+    chart.update("none");
+    return;
+  }
 
   const deltaTotal   = currentTotal   - lastTotal;
   const deltaThreats = currentThreats - lastThreats;
@@ -214,12 +227,6 @@ function pushRealtimeData(stats) {
   lastTotal   = currentTotal;
   lastThreats = currentThreats;
 
-  const now = new Date();
-  const secs = now.getSeconds();
-  now.setSeconds(secs - (secs % 5));
-  const timeLabel = now.toLocaleTimeString([], { hour12: false });
-
-  const chart = timelineChartInstance;
   chart.data.labels.push(timeLabel);
   chart.data.datasets[0].data.push(Math.max(0, deltaThreats));
   chart.data.datasets[1].data.push(Math.max(0, deltaTotal));
@@ -232,3 +239,27 @@ function pushRealtimeData(stats) {
 
   chart.update("none");
 }
+
+function resetCharts() {
+  lastTotal = null;
+  lastThreats = null;
+  if (timelineChartInstance) {
+    timelineChartInstance.data.labels = [];
+    timelineChartInstance.data.datasets[0].data = [];
+    timelineChartInstance.data.datasets[1].data = [];
+    timelineChartInstance.update();
+  }
+  if (vectorChartInstance) {
+    vectorChartInstance.data.labels = ["No Active Threats"];
+    vectorChartInstance.data.datasets[0].data = [1];
+    vectorChartInstance.data.datasets[0].backgroundColor = ["rgba(139, 92, 246, 0.15)"];
+    vectorChartInstance.data.datasets[0].borderWidth = 2;
+    vectorChartInstance.data.datasets[0].borderColor = "rgba(139, 92, 246, 0.3)";
+    vectorChartInstance.update();
+  }
+}
+
+window.initCharts = initCharts;
+window.updateCharts = updateCharts;
+window.pushRealtimeData = pushRealtimeData;
+window.resetCharts = resetCharts;

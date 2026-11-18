@@ -2,7 +2,10 @@ const express = require("express");
 const db = require("../services/localDbService");
 const { computeHealthScore } = require("../utils/healthScore");
 const escalationService = require("../services/escalationService");
-const logAnalysisService = require("../services/logAnalysisService");
+const wafService = require("../services/wafService");
+const containmentService = require("../services/containmentService");
+const simulatorService = require("../services/simulatorService");
+const crsIngestionService = require("../services/crsIngestionService");
 
 const router = express.Router();
 
@@ -39,6 +42,21 @@ router.get("/", async (req, res) => {
       attackTypeBreakdown[type] = (attackTypeBreakdown[type] || 0) + 1;
     }
 
+    // Calculate Active MITRE ATT&CK Technique Counts
+    const mitreStats = {};
+    for (const inc of incidents) {
+      if (inc.status !== "RESOLVED") {
+        let mitre = inc.mitreTechnique;
+        if (typeof mitre === "string") {
+          try { mitre = JSON.parse(mitre); } catch (e) {}
+        }
+        const tid = (mitre && typeof mitre === "object" && mitre.id) ? mitre.id : (typeof mitre === "string" && mitre ? mitre : null);
+        if (tid) {
+          mitreStats[tid] = (mitreStats[tid] || 0) + 1;
+        }
+      }
+    }
+
     // Calculate MTTR (Mean Time to Resolve in Minutes) & SLA Compliance Rate
     let totalResolveTimeMs = 0;
     let resolvedCount = 0;
@@ -65,6 +83,9 @@ router.get("/", async (req, res) => {
     const slaComplianceRate = resolvedCount > 0 ? Math.round((slaMetCount / resolvedCount) * 100) : "N/A";
 
     const healthScore = computeHealthScore(incidents);
+    const wafStatus = wafService.getStatus();
+    const crsStatus = crsIngestionService.getStatus();
+    const wafStats = await db.getWafStats();
 
     const summary = {
       total,
@@ -75,11 +96,27 @@ router.get("/", async (req, res) => {
       severityBreakdown,
       statusBreakdown,
       attackTypeBreakdown,
+      mitreStats,
       analytics: {
         mttrMinutes,
-        detectionLatencyMs: logAnalysisService.getAverageDetectionLatency() > 0 ? parseFloat(logAnalysisService.getAverageDetectionLatency().toFixed(4)) : "N/A",
+        detectionLatencyMs: null, // Hardcoded fictitious metric removed; true latency measured dynamically on real requests
         slaComplianceRate,
-        threatsDetected: incidents.filter(i => i.assignedTo === "SOC-Engine" || i.assignedTo === "Autonomous-SOC").length
+        threatsDetected: incidents.filter(i => i.assignedTo === "OWASP-WAF-Engine" || i.assignedTo === "OWASP-CRS-Engine" || i.assignedTo === "SOC-Engine" || i.assignedTo === "Autonomous-SOC").length,
+        wafRulesCount: wafStatus.rulesCount,
+        totalInspected: wafStatus.totalInspected,
+        totalAlerts: wafStatus.totalAlerts,
+        // Official OWASP CRS metrics (RelevantOnly audit logging)
+        crsActive: crsStatus.gateway?.status === "ONLINE",
+        crsGatewayStatus: crsStatus.gateway?.status || "UNKNOWN",
+        crsGatewayUrl: crsStatus.gateway?.url || "http://localhost:8080",
+        crsIngestionActive: crsStatus.ingestion?.active || false,
+        crsStoredAuditEvents: wafStats.totalEvents,
+        crsBlockedCount: wafStats.blocked || wafStats.totalBlocked,
+        crsDetectionOnlyCount: wafStats.allowed || wafStats.totalAllowed,
+        crsAuditLoggingMode: "RelevantOnly",
+        crsEventsCount: wafStats.totalEvents,
+        crsVersion: crsStatus.versions?.crsVersion || "OWASP_CRS/4.30.0",
+        crsModsecVersion: crsStatus.versions?.modsecVersion || "ModSecurity v3.0.17"
       },
       healthScore,
       escalatedCount
@@ -90,13 +127,40 @@ router.get("/", async (req, res) => {
   }
 });
 
-const simulatorService = require("../services/simulatorService");
-
 router.post("/reset", async (req, res) => {
   try {
     const result = db.resetDatabase();
+    wafService.reset();
+    containmentService.clear();
+    simulatorService.stopSimulator();
     simulatorService.resetCounters();
-    return res.json({ success: true, message: "Dashboard reset to fresh initial state.", result });
+    crsIngestionService.processedTxIds.clear();
+
+    if (req.io) {
+      req.io.emit("system_reset");
+      req.io.emit("dashboard_update_needed");
+      req.io.emit("simulator_state_changed", { isRunning: false });
+      req.io.emit("gateway_blacklist_updated", { action: "RESET", totalBlocked: 0 });
+      req.io.emit("telemetry_stream", {
+        id: `reset-${Date.now()}`,
+        timestamp: new Date().toISOString(),
+        raw: "[SYSTEM RESET] SOC baseline, threat telemetry, and gateway containment cleared.",
+        sensor: "SYSTEM",
+        sourceIp: "127.0.0.1",
+        isThreat: false,
+        threatType: "System Baseline Reset",
+        threatScore: 0,
+        severity: "CLEAN",
+        color: "#10b981",
+        stats: { totalGenerated: 0, threatsBlocked: 0 }
+      });
+    }
+
+    return res.json({
+      success: true,
+      message: "Dashboard reset to fresh initial state. Database, WAF caches, containment blacklists, and simulator cleared.",
+      result
+    });
   } catch (error) {
     return res.status(500).json({ error: error.message });
   }

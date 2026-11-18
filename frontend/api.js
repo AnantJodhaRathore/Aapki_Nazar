@@ -52,23 +52,23 @@ const api = {
     method: "POST",
     body: JSON.stringify({ action, ...meta })
   }),
-  analyzeLogs: (logs) => apiRequest("/analyze-logs", {
-    method: "POST",
-    body: JSON.stringify({ logs })
-  }),
-  // Simulator Endpoints
-  getSimulatorStatus: () => apiRequest("/api/simulator/status"),
-  startSimulator: (interval = 1500, attackRatio = 0.35) => apiRequest("/api/simulator/start", {
-    method: "POST",
-    body: JSON.stringify({ interval, attackRatio })
-  }),
-  stopSimulator: () => apiRequest("/api/simulator/stop", {
-    method: "POST"
-  }),
   getRules: () => apiRequest("/api/rules"),
   containIncident: (id, ip) => apiRequest(`/api/containment/${id}/contain`, {
     method: "POST",
     body: JSON.stringify({ ip })
+  }),
+  // OWASP WAF & Active Gateway Endpoints
+  getWafStatus: () => apiRequest("/api/waf/status"),
+  triggerWafAttack: (type) => apiRequest("/api/waf/test", {
+    method: "POST",
+    body: JSON.stringify({ type })
+  }),
+  getBlacklist: () => apiRequest("/api/containment/blacklist"),
+  releaseIp: (ip) => apiRequest(`/api/containment/${encodeURIComponent(ip)}/release`, {
+    method: "POST"
+  }),
+  resetSystem: () => apiRequest("/dashboard/reset", {
+    method: "POST"
   })
 };
 

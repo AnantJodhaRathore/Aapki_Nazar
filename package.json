@@ -5,7 +5,8 @@
   "main": "backend/server.js",
   "scripts": {
     "start": "node backend/server.js",
-    "reset": "node -e \"require('./backend/services/localDbService').resetDatabase(); console.log('✨ SOC Dashboard reset to fresh starter state!');\""
+    "attack": "node attack.js",
+    "reset": "node -e \"require('./backend/services/localDbService').resetDatabase(); console.log('[SOC] Dashboard reset to fresh starter state!');\""
   },
   "keywords": [
     "soc",
